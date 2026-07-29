@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --background: #070a0f;
+  --surface: #0f141d;
+  --surface-2: #151c27;
+  --text: #f7f9fc;
+  --muted: #9ca8b8;
+  --blue: #168bff;
+  --blue-2: #5bb2ff;
+  --line: rgba(255,255,255,.10);
+  --radius-button: 12px;
+  --radius-card: 20px;
+  --radius-panel: 24px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 78% 5%, rgba(22,139,255,.18), transparent 28rem),
+    radial-gradient(circle at 12% 40%, rgba(91,178,255,.08), transparent 24rem),
+    var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; }
+.container { width: min(1160px, calc(100% - 32px)); margin: 0 auto; }
+.glass { background: rgba(15,20,29,.78); border: 1px solid var(--line); backdrop-filter: blur(16px); }
+.card { border-radius: var(--radius-card); background: linear-gradient(145deg, rgba(21,28,39,.95), rgba(11,15,22,.95)); border: 1px solid var(--line); }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 20px; border-radius:var(--radius-button); border:1px solid transparent; font-weight:700; cursor:pointer; }
+.btn-primary { background:linear-gradient(135deg,var(--blue),var(--blue-2)); color:#03101d; box-shadow:0 0 28px rgba(22,139,255,.28); }
+.btn-secondary { background:rgba(255,255,255,.04); color:var(--text); border-color:var(--line); }
+.grid { display:grid; gap:20px; }
+@media (max-width: 760px) { .desktop-only { display:none!important; } }

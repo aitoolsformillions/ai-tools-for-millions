@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { BrandMark } from "./brand-mark";
+export function Header(){return <header style={{position:'sticky',top:0,zIndex:20,borderBottom:'1px solid var(--line)',background:'rgba(7,10,15,.82)',backdropFilter:'blur(16px)'}}><div className="container" style={{minHeight:78,display:'flex',alignItems:'center',justifyContent:'space-between',gap:20}}><Link href="/"><BrandMark/></Link><nav className="desktop-only" style={{display:'flex',gap:28,color:'var(--muted)',fontSize:14}}><Link href="/tools">AI Tools</Link><Link href="#prompts">Prompt Vault</Link><Link href="#learn">Learning Hub</Link></nav><Link className="btn btn-primary" href="/dashboard">Start Building</Link></div></header>}
