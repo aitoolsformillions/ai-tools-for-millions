@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "../auth/actions";
+import { signOut } from "@/app/auth/actions";
 const blocks=[['Continue Learning','AI Foundations · 20% complete'],['My AI Stack','4 tools saved'],['Prompt Vault','12 prompts saved'],['Recommended','AI for Business learning path']];
 export default async function Dashboard(){  const supabase = await createClient();
 
