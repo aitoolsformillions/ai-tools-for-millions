@@ -61,7 +61,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Link href="/favorites" style={navigationLinkStyle}>
             Favorites
           </Link>
-
+<Link href="/stacks" style={navigationLinkStyle}>
+  AI Stacks
+</Link>
           <Link href="/profile" style={navigationLinkStyle}>
             Profile
           </Link>
@@ -69,6 +71,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Link href="/settings" style={navigationLinkStyle}>
             Settings
           </Link>
+          <Link
+  href="/upgrade"
+  style={{
+    ...navigationLinkStyle,
+    marginTop: "14px",
+    border: "1px solid rgba(96,165,250,0.38)",
+    background: "rgba(37,99,235,0.14)",
+    color: "#bfdbfe",
+  }}
+>
+  ★ Upgrade to Pro
+</Link>
+          
         </nav>
       </aside>
 
