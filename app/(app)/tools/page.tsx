@@ -10,9 +10,22 @@ export default async function ToolsPage() {
 
   const { data: tools, error } = await supabase
     .from("ai_tools")
-    .select(
-      "id, name, slug, tagline, description, pricing_model, rating"
-    )
+    .select(`
+      id,
+      name,
+      slug,
+      tagline,
+      description,
+      pricing_model,
+      rating,
+      tool_categories (
+        categories (
+          id,
+          name,
+          slug
+        )
+      )
+    `)
     .eq("status", "published")
     .order("rating", { ascending: false });
 
@@ -27,6 +40,19 @@ export default async function ToolsPage() {
     favoriteToolIds =
       favorites?.map((favorite) => favorite.tool_id) ?? [];
   }
+
+  const normalizedTools =
+  tools?.map((tool) => ({
+    ...tool,
+    categories:
+      tool.tool_categories?.flatMap((item) =>
+        Array.isArray(item.categories)
+          ? item.categories
+          : item.categories
+            ? [item.categories]
+            : []
+      ) ?? [],
+  })) ?? [];
 
   return (
     <section>
@@ -73,7 +99,7 @@ export default async function ToolsPage() {
         </div>
       ) : (
         <ToolsSearch
-          tools={tools ?? []}
+          tools={normalizedTools}
           favoriteToolIds={favoriteToolIds}
           isSignedIn={Boolean(user)}
         />
