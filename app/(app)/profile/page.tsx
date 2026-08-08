@@ -12,17 +12,22 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "display_name, created_at, updated_at, membership_tier, subscription_status"
+      "display_name, created_at, membership_tier, subscription_status"
     )
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error("Profile query error:", error.message);
+  }
 
   const displayName =
     profile?.display_name ||
     user.user_metadata?.display_name ||
+    user.email?.split("@")[0] ||
     "AI Tools Member";
 
   return (
@@ -65,7 +70,6 @@ export default async function ProfilePage() {
           padding: 30,
         }}
       >
-        {/* DISPLAY NAME */}
         <div style={{ marginBottom: 24 }}>
           <p
             style={{
@@ -82,7 +86,6 @@ export default async function ProfilePage() {
           </h2>
         </div>
 
-        {/* MEMBERSHIP */}
         <div style={{ marginBottom: 24 }}>
           <p
             style={{
@@ -118,7 +121,6 @@ export default async function ProfilePage() {
           </p>
         </div>
 
-        {/* EMAIL */}
         <div style={{ marginBottom: 24 }}>
           <p
             style={{
@@ -135,7 +137,6 @@ export default async function ProfilePage() {
           </p>
         </div>
 
-        {/* MEMBER SINCE */}
         <div>
           <p
             style={{
