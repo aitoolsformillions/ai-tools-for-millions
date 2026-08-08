@@ -212,18 +212,12 @@ export default async function StacksPage() {
                       Unlock with Pro
                     </Link>
                   ) : (
-                    <span
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: 12,
-                        background: "rgba(34,197,94,0.12)",
-                        border: "1px solid rgba(34,197,94,0.25)",
-                        color: "#bbf7d0",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Access Unlocked
-                    </span>
+                    <Link
+  href={`/stacks/${stack.slug}`}
+  className="btn btn-primary"
+>
+  Open Workflow →
+</Link>
                   )}
                 </div>
 
