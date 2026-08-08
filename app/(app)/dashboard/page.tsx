@@ -23,7 +23,7 @@ export default async function Dashboard() {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, membership_tier, subscription_status")
       .eq("id", user.id)
       .maybeSingle(),
 
@@ -54,6 +54,9 @@ export default async function Dashboard() {
     user.user_metadata?.display_name ||
     user.email?.split("@")[0] ||
     "there";
+
+  const membershipTier =
+    profileResult.data?.membership_tier === "pro" ? "Pro" : "Free";
 
   const totalTools = toolsResult.count ?? 0;
   const savedTools = favoritesResult.count ?? 0;
@@ -159,9 +162,13 @@ export default async function Dashboard() {
         />
 
         <DashboardStat
-          label="Account"
-          value="Active"
-          description="Your member profile is ready"
+          label="Membership"
+          value={membershipTier}
+          description={
+            membershipTier === "Pro"
+              ? "Premium features unlocked"
+              : "Upgrade options coming soon"
+          }
           href="/profile"
         />
       </div>
@@ -213,12 +220,7 @@ export default async function Dashboard() {
             </Link>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gap: 14,
-            }}
-          >
+          <div style={{ display: "grid", gap: 14 }}>
             {recommendedTools.map((tool) => (
               <Link
                 key={tool.id}
@@ -241,9 +243,7 @@ export default async function Dashboard() {
                   }}
                 >
                   <div>
-                    <h3 style={{ margin: 0, fontSize: 20 }}>
-                      {tool.name}
-                    </h3>
+                    <h3 style={{ margin: 0, fontSize: 20 }}>{tool.name}</h3>
 
                     <p
                       style={{
@@ -288,12 +288,7 @@ export default async function Dashboard() {
             Keep building your AI stack
           </h2>
 
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-            }}
-          >
+          <div style={{ display: "grid", gap: 12 }}>
             <QuickLink
               href="/tools"
               title="Explore AI Tools"

@@ -16,7 +16,8 @@ export default async function FavoritesPage() {
   const { data: favorites, error } = await supabase
     .from("favorites")
     .select(`
-      id,
+      user_id,
+      tool_id,
       created_at,
       ai_tools (
         id,
@@ -24,7 +25,8 @@ export default async function FavoritesPage() {
         slug,
         tagline,
         pricing_model,
-        website_url
+        website_url,
+        rating
       )
     `)
     .eq("user_id", user.id)
@@ -70,7 +72,7 @@ export default async function FavoritesPage() {
 
       {error ? (
         <div style={messageCardStyle}>
-          We could not load your favorites. Please refresh the page.
+          Unable to load favorites: {error.message}
         </div>
       ) : favorites && favorites.length > 0 ? (
         <div
@@ -90,7 +92,10 @@ export default async function FavoritesPage() {
             }
 
             return (
-              <article key={favorite.id} style={toolCardStyle}>
+              <article
+                key={`${favorite.user_id}-${favorite.tool_id}`}
+                style={toolCardStyle}
+              >
                 <p
                   style={{
                     margin: 0,
@@ -117,18 +122,36 @@ export default async function FavoritesPage() {
                   {tool.tagline || "Explore this saved AI tool."}
                 </p>
 
-                <Link
-                  href={`/tools/${tool.slug}`}
+                <div
                   style={{
-                    display: "inline-flex",
-                    marginTop: "22px",
-                    color: "#ffffff",
-                    fontWeight: 700,
-                    textDecoration: "none",
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    marginTop: 18,
+                    flexWrap: "wrap",
                   }}
                 >
-                  View Tool →
-                </Link>
+                  <span
+                    style={{
+                      padding: "7px 11px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    ★ {tool.rating ?? "New"}
+                  </span>
+
+                  <Link
+                    href={`/tools/${tool.slug}`}
+                    style={{
+                      color: "#ffffff",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                    }}
+                  >
+                    View Tool →
+                  </Link>
+                </div>
               </article>
             );
           })}

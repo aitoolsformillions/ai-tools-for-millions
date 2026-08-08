@@ -14,7 +14,9 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, created_at, updated_at")
+    .select(
+      "display_name, created_at, updated_at, membership_tier, subscription_status"
+    )
     .eq("id", user.id)
     .single();
 
@@ -63,6 +65,7 @@ export default async function ProfilePage() {
           padding: 30,
         }}
       >
+        {/* DISPLAY NAME */}
         <div style={{ marginBottom: 24 }}>
           <p
             style={{
@@ -79,6 +82,43 @@ export default async function ProfilePage() {
           </h2>
         </div>
 
+        {/* MEMBERSHIP */}
+        <div style={{ marginBottom: 24 }}>
+          <p
+            style={{
+              margin: 0,
+              color: "var(--muted)",
+              fontSize: 13,
+            }}
+          >
+            Membership
+          </p>
+
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 18,
+              fontWeight: 700,
+            }}
+          >
+            {profile?.membership_tier === "pro"
+              ? "Pro Member"
+              : "Free Member"}
+          </p>
+
+          <p
+            style={{
+              margin: "6px 0 0",
+              color: "var(--muted)",
+              fontSize: 14,
+            }}
+          >
+            Subscription status:{" "}
+            {profile?.subscription_status ?? "inactive"}
+          </p>
+        </div>
+
+        {/* EMAIL */}
         <div style={{ marginBottom: 24 }}>
           <p
             style={{
@@ -95,6 +135,7 @@ export default async function ProfilePage() {
           </p>
         </div>
 
+        {/* MEMBER SINCE */}
         <div>
           <p
             style={{
