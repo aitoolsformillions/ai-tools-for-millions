@@ -9,25 +9,27 @@ export default async function ToolsPage() {
   } = await supabase.auth.getUser();
 
   const { data: tools, error } = await supabase
-    .from("ai_tools")
-    .select(`
-      id,
-      name,
-      slug,
-      tagline,
-      description,
-      pricing_model,
-      rating,
-      tool_categories (
-        categories (
-          id,
-          name,
-          slug
-        )
+  .from("ai_tools")
+  .select(`
+    id,
+    name,
+    slug,
+    tagline,
+    description,
+    pricing_model,
+    rating,
+    is_featured,
+    is_trending,
+    tool_categories (
+      categories (
+        id,
+        name,
+        slug
       )
-    `)
-    .eq("status", "published")
-    .order("rating", { ascending: false });
+    )
+  `)
+  .eq("status", "published")
+  .order("rating", { ascending: false });
 
   let favoriteToolIds: string[] = [];
 

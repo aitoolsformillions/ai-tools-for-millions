@@ -18,6 +18,8 @@ type Tool = {
   description: string | null;
   pricing_model: string | null;
   rating: number | null;
+  is_featured: boolean;
+  is_trending: boolean;
   categories: Category[];
 };
 
@@ -34,6 +36,8 @@ export function ToolsSearch({
 }: ToolsSearchProps) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const [showTrendingOnly, setShowTrendingOnly] = useState(false);
 
   const categories = useMemo(() => {
     const categoryMap = new Map<string, Category>();
@@ -69,9 +73,26 @@ export function ToolsSearch({
           (category) => category.slug === selectedCategory
         );
 
-      return matchesSearch && matchesCategory;
+      const matchesFeatured =
+        !showFeaturedOnly || tool.is_featured;
+
+      const matchesTrending =
+        !showTrendingOnly || tool.is_trending;
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesFeatured &&
+        matchesTrending
+      );
     });
-  }, [search, selectedCategory, tools]);
+  }, [
+    search,
+    selectedCategory,
+    showFeaturedOnly,
+    showTrendingOnly,
+    tools,
+  ]);
 
   const favorites = new Set(favoriteToolIds);
 
@@ -105,6 +126,26 @@ export function ToolsSearch({
             {category.name}
           </button>
         ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            setShowFeaturedOnly((current) => !current)
+          }
+          style={categoryButtonStyle(showFeaturedOnly)}
+        >
+          ★ Featured
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setShowTrendingOnly((current) => !current)
+          }
+          style={categoryButtonStyle(showTrendingOnly)}
+        >
+          🔥 Trending
+        </button>
       </div>
 
       <input
@@ -159,6 +200,40 @@ export function ToolsSearch({
                   marginBottom: 12,
                 }}
               >
+                {tool.is_featured ? (
+                  <span
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      background: "rgba(37,99,235,0.24)",
+                      border:
+                        "1px solid rgba(96,165,250,0.5)",
+                      color: "#dbeafe",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    ★ Featured
+                  </span>
+                ) : null}
+
+                {tool.is_trending ? (
+                  <span
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      background: "rgba(251,146,60,0.14)",
+                      border:
+                        "1px solid rgba(251,146,60,0.34)",
+                      color: "#fdba74",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    🔥 Trending
+                  </span>
+                ) : null}
+
                 {tool.categories.map((category) => (
                   <span
                     key={category.id}
@@ -166,7 +241,8 @@ export function ToolsSearch({
                       padding: "6px 10px",
                       borderRadius: 999,
                       background: "rgba(96,165,250,0.12)",
-                      border: "1px solid rgba(96,165,250,0.24)",
+                      border:
+                        "1px solid rgba(96,165,250,0.24)",
                       color: "#93c5fd",
                       fontSize: 11,
                       fontWeight: 800,
@@ -181,7 +257,12 @@ export function ToolsSearch({
                 {tool.name}
               </h2>
 
-              <p style={{ color: "var(--muted)", lineHeight: 1.7 }}>
+              <p
+                style={{
+                  color: "var(--muted)",
+                  lineHeight: 1.7,
+                }}
+              >
                 {tool.tagline ?? tool.description}
               </p>
 
@@ -246,7 +327,8 @@ export function ToolsSearch({
                       alignItems: "center",
                       padding: "8px 14px",
                       borderRadius: 10,
-                      border: "1px solid rgba(255,255,255,0.16)",
+                      border:
+                        "1px solid rgba(255,255,255,0.16)",
                       color: "#ffffff",
                       textDecoration: "none",
                       fontWeight: 700,
