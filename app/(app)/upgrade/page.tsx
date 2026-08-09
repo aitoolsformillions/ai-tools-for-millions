@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { UpgradeButton } from "@/components/upgrade-button";
 
 export default async function UpgradePage() {
   const supabase = await createClient();
@@ -156,7 +158,7 @@ export default async function UpgradePage() {
                 fontWeight: 800,
               }}
             >
-              COMING SOON
+              $19 / MONTH
             </span>
           </div>
 
@@ -198,22 +200,7 @@ export default async function UpgradePage() {
                 Pro Membership Active
               </span>
             ) : (
-              <button
-                type="button"
-                disabled
-                style={{
-                  padding: "12px 18px",
-                  border: 0,
-                  borderRadius: 12,
-                  background: "#2563eb",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  opacity: 0.7,
-                  cursor: "not-allowed",
-                }}
-              >
-                Upgrade Coming Soon
-              </button>
+              <UpgradeButton />
             )}
           </div>
         </div>
@@ -235,7 +222,7 @@ export default async function UpgradePage() {
             maxWidth: 850,
           }}
         >
-          Finding an AI tool is only the beginning. Pro will focus on helping
+          Finding an AI tool is only the beginning. Pro focuses on helping
           members understand which tools work together, what workflows to use,
           and how to apply AI to practical goals.
         </p>
@@ -255,7 +242,7 @@ export default async function UpgradePage() {
   );
 }
 
-function Feature({ children }: { children: React.ReactNode }) {
+function Feature({ children }: { children: ReactNode }) {
   return (
     <p
       style={{
