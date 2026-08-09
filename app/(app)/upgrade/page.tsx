@@ -4,7 +4,18 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UpgradeButton } from "@/components/upgrade-button";
 
-export default async function UpgradePage() {
+type UpgradePageProps = {
+  searchParams: Promise<{
+    success?: string;
+    canceled?: string;
+  }>;
+};
+
+export default async function UpgradePage({
+  searchParams,
+}: UpgradePageProps) {
+  const params = await searchParams;
+
   const supabase = await createClient();
 
   const {
@@ -22,9 +33,126 @@ export default async function UpgradePage() {
     .maybeSingle();
 
   const isPro = profile?.membership_tier === "pro";
+  const subscriptionStatus =
+    profile?.subscription_status ?? "inactive";
+
+  const checkoutSucceeded = params.success === "true";
+  const checkoutCanceled = params.canceled === "true";
 
   return (
     <section>
+      {checkoutSucceeded ? (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: 22,
+            borderRadius: 18,
+            border: "1px solid rgba(34,197,94,0.3)",
+            background: "rgba(34,197,94,0.08)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#bbf7d0",
+              fontSize: 12,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            Payment Successful
+          </p>
+
+          <h2
+            style={{
+              margin: "8px 0 0",
+              fontSize: 30,
+            }}
+          >
+            {isPro
+              ? "Welcome to AI Tools for Millions Pro."
+              : "Your payment was successful."}
+          </h2>
+
+          <p
+            style={{
+              margin: "10px 0 0",
+              color: "var(--muted)",
+              lineHeight: 1.7,
+            }}
+          >
+            {isPro
+              ? "Your Pro membership is active and premium AI Stacks are now unlocked."
+              : "Stripe has confirmed your payment. Your membership is being updated now. Refresh this page in a moment if Pro access is not visible yet."}
+          </p>
+
+          {isPro ? (
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <Link href="/stacks" className="btn btn-primary">
+                Explore Pro AI Stacks
+              </Link>
+
+              <Link
+                href="/dashboard"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "10px 16px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                Go to Dashboard
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {checkoutCanceled ? (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: 20,
+            borderRadius: 18,
+            border: "1px solid rgba(251,191,36,0.28)",
+            background: "rgba(251,191,36,0.08)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#fde68a",
+              fontWeight: 800,
+            }}
+          >
+            Checkout canceled.
+          </p>
+
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "var(--muted)",
+              lineHeight: 1.65,
+            }}
+          >
+            No changes were made to your membership. You can return to
+            Checkout whenever you are ready.
+          </p>
+        </div>
+      ) : null}
+
       <div style={{ marginBottom: 34 }}>
         <p
           style={{
@@ -187,18 +315,34 @@ export default async function UpgradePage() {
 
           <div style={{ marginTop: 28 }}>
             {isPro ? (
-              <span
-                style={{
-                  display: "inline-flex",
-                  padding: "12px 18px",
-                  borderRadius: 12,
-                  background: "#2563eb",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                }}
-              >
-                Pro Membership Active
-              </span>
+              <div>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    padding: "12px 18px",
+                    borderRadius: 12,
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                  }}
+                >
+                  Pro Membership Active
+                </span>
+
+                {subscriptionStatus === "canceling" ? (
+                  <p
+                    style={{
+                      margin: "12px 0 0",
+                      color: "#fde68a",
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Your subscription is scheduled to cancel, but Pro access
+                    remains active until the end of the current billing period.
+                  </p>
+                ) : null}
+              </div>
             ) : (
               <UpgradeButton />
             )}

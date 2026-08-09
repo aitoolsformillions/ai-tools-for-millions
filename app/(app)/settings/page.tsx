@@ -14,16 +14,24 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "membership_tier, subscription_status, stripe_customer_id"
+      "membership_tier, subscription_status, stripe_customer_id, stripe_subscription_id"
     )
     .eq("id", user.id)
     .maybeSingle();
 
+  if (error) {
+    console.error("Settings profile error:", error.message);
+  }
+
   const isPro = profile?.membership_tier === "pro";
   const hasStripeCustomer = Boolean(profile?.stripe_customer_id);
+  const subscriptionStatus =
+    profile?.subscription_status ?? "inactive";
+
+  const isCanceling = subscriptionStatus === "canceling";
 
   return (
     <section>
@@ -118,10 +126,78 @@ export default async function SettingsPage() {
             }}
           >
             Subscription status:{" "}
-            <strong>
-              {profile?.subscription_status ?? "inactive"}
+            <strong style={{ color: "#ffffff" }}>
+              {formatSubscriptionStatus(subscriptionStatus)}
             </strong>
           </p>
+
+          {isPro && isCanceling ? (
+            <div
+              style={{
+                margin: "18px 0",
+                padding: 18,
+                borderRadius: 14,
+                border: "1px solid rgba(251,191,36,0.28)",
+                background: "rgba(251,191,36,0.08)",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  color: "#fde68a",
+                  fontWeight: 800,
+                }}
+              >
+                Your Pro membership is scheduled to cancel.
+              </p>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "var(--muted)",
+                  lineHeight: 1.65,
+                }}
+              >
+                You still have full Pro access during the remaining billing
+                period. Stripe will end the subscription at the scheduled
+                cancellation date, and your account will then return to the
+                Free plan automatically.
+              </p>
+            </div>
+          ) : null}
+
+          {isPro && subscriptionStatus === "active" ? (
+            <div
+              style={{
+                margin: "18px 0",
+                padding: 18,
+                borderRadius: 14,
+                border: "1px solid rgba(34,197,94,0.24)",
+                background: "rgba(34,197,94,0.08)",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  color: "#bbf7d0",
+                  fontWeight: 800,
+                }}
+              >
+                Your Pro membership is active.
+              </p>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "var(--muted)",
+                  lineHeight: 1.65,
+                }}
+              >
+                Premium AI Stacks and other Pro features are currently
+                unlocked for your account.
+              </p>
+            </div>
+          ) : null}
 
           {isPro && hasStripeCustomer ? (
             <ManageSubscriptionButton />
@@ -141,4 +217,27 @@ export default async function SettingsPage() {
       </div>
     </section>
   );
+}
+
+function formatSubscriptionStatus(status: string) {
+  switch (status) {
+    case "active":
+      return "Active";
+
+    case "canceling":
+      return "Canceling";
+
+    case "canceled":
+      return "Canceled";
+
+    case "trialing":
+      return "Trial";
+
+    case "past_due":
+      return "Past Due";
+
+    case "inactive":
+    default:
+      return "Inactive";
+  }
 }
