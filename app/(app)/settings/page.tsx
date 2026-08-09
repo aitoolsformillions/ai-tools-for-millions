@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ManageSubscriptionButton } from "@/components/manage-subscription-button";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -12,6 +13,17 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/login");
   }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select(
+      "membership_tier, subscription_status, stripe_customer_id"
+    )
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isPro = profile?.membership_tier === "pro";
+  const hasStripeCustomer = Boolean(profile?.stripe_customer_id);
 
   return (
     <section>
@@ -42,36 +54,90 @@ export default async function SettingsPage() {
             fontSize: 18,
           }}
         >
-          Manage your password and account preferences.
+          Manage your security, membership, and billing settings.
         </p>
       </div>
 
       <div
-        className="card"
         style={{
-          maxWidth: 720,
-          padding: 30,
+          display: "grid",
+          gap: 20,
+          maxWidth: 760,
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Security</h2>
+        <div className="card" style={{ padding: 30 }}>
+          <h2 style={{ marginTop: 0 }}>Security</h2>
 
-        <p
-          style={{
-            color: "var(--muted)",
-            lineHeight: 1.7,
-          }}
-        >
-          Update your password if you want to change the credentials used to
-          sign in to your account.
-        </p>
+          <p
+            style={{
+              color: "var(--muted)",
+              lineHeight: 1.7,
+            }}
+          >
+            Change the password used to sign in to your account.
+          </p>
 
-        <Link
-          href="/forgot-password"
-          className="btn btn-primary"
-          style={{ display: "inline-flex", marginTop: 12 }}
-        >
-          Change Password
-        </Link>
+          <Link
+            href="/forgot-password"
+            className="btn btn-primary"
+            style={{
+              display: "inline-flex",
+              marginTop: 12,
+            }}
+          >
+            Change Password
+          </Link>
+        </div>
+
+        <div className="card" style={{ padding: 30 }}>
+          <p
+            style={{
+              margin: 0,
+              color: "#60a5fa",
+              fontSize: 12,
+              fontWeight: 800,
+              textTransform: "uppercase",
+            }}
+          >
+            Membership
+          </p>
+
+          <h2
+            style={{
+              margin: "8px 0",
+              fontSize: 28,
+            }}
+          >
+            {isPro ? "Pro Membership" : "Free Membership"}
+          </h2>
+
+          <p
+            style={{
+              color: "var(--muted)",
+              lineHeight: 1.7,
+            }}
+          >
+            Subscription status:{" "}
+            <strong>
+              {profile?.subscription_status ?? "inactive"}
+            </strong>
+          </p>
+
+          {isPro && hasStripeCustomer ? (
+            <ManageSubscriptionButton />
+          ) : (
+            <Link
+              href="/upgrade"
+              className="btn btn-primary"
+              style={{
+                display: "inline-flex",
+                marginTop: 12,
+              }}
+            >
+              View Pro Membership
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );

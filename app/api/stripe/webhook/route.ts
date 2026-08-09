@@ -80,6 +80,38 @@ export async function POST(request: Request) {
       }
     }
 
+    if (event.type === "customer.subscription.updated") {
+      const subscription = event.data.object as Stripe.Subscription;
+
+      const userId = subscription.metadata?.user_id;
+
+      const hasScheduledCancellation =
+        subscription.cancel_at_period_end === true ||
+        subscription.cancel_at !== null;
+
+      let subscriptionStatus = subscription.status;
+
+      if (
+        hasScheduledCancellation &&
+        subscription.status !== "canceled"
+      ) {
+        subscriptionStatus = "canceling";
+      }
+
+      if (userId) {
+        const { error } = await supabaseAdmin
+          .from("profiles")
+          .update({
+            subscription_status: subscriptionStatus,
+          })
+          .eq("id", userId);
+
+        if (error) {
+          throw error;
+        }
+      }
+    }
+
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
 
