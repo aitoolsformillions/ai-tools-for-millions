@@ -53,7 +53,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Link href="/dashboard" style={navigationLinkStyle}>
             Dashboard
           </Link>
-
+<Link href="/opportunities" style={navigationLinkStyle}>
+  Opportunities
+</Link>
           <Link href="/tools" style={navigationLinkStyle}>
             Explore AI Tools
           </Link>
