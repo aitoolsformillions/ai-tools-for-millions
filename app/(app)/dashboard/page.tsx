@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
+import {
+  recordRecommendationEvent,
+  dismissRecommendation,
+} from "@/app/(app)/recommendations/actions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -47,6 +51,27 @@ export default async function DashboardPage() {
     `)
     .eq("user_id", user.id)
     .maybeSingle();
+
+  const { data: recommendationEvents, error: recommendationEventsError } =
+    await supabase
+      .from("recommendation_events")
+      .select(`
+        recommendation_type,
+        recommendation_id,
+        event_type,
+        context,
+        created_at
+      `)
+      .eq("user_id", user.id)
+      .eq("recommendation_type", "opportunity")
+      .order("created_at", { ascending: false });
+
+  if (recommendationEventsError) {
+    console.error(
+      "Recommendation events load error:",
+      recommendationEventsError.message
+    );
+  }
 
   const displayName =
     profile?.display_name ||
@@ -246,6 +271,29 @@ export default async function DashboardPage() {
     preferences?.primary_goal
   );
 
+  const dismissedOpportunityIds = new Set(
+    (recommendationEvents ?? [])
+      .filter(
+        (event) => event.event_type === "dismissed"
+      )
+      .map((event) => event.recommendation_id)
+  );
+
+  const openedOpportunityCounts = new Map<string, number>();
+
+  for (const event of recommendationEvents ?? []) {
+    if (event.event_type !== "opened") {
+      continue;
+    }
+
+    openedOpportunityCounts.set(
+      event.recommendation_id,
+      (openedOpportunityCounts.get(
+        event.recommendation_id
+      ) ?? 0) + 1
+    );
+  }
+
   const { data: recommendationCandidates, error: recommendationError } =
     await supabase
       .from("opportunities")
@@ -292,6 +340,8 @@ export default async function DashboardPage() {
         (item) => item.opportunity.id
       )
     ),
+    dismissedIds: dismissedOpportunityIds,
+    openedCounts: openedOpportunityCounts,
   });
 
   const totalMoneyEarned = Number(
@@ -515,20 +565,6 @@ export default async function DashboardPage() {
             value={formatNumber(skillsGained)}
           />
         </div>
-
-        {totalOutcomes === 0 ? (
-          <p
-            style={{
-              margin: "18px 0 0",
-              color: "var(--muted)",
-              lineHeight: 1.65,
-            }}
-          >
-            No outcomes recorded yet. Start an opportunity,
-            apply the workflow, and record a real result when
-            you have one.
-          </p>
-        ) : null}
       </section>
 
       {continueItem ? (
@@ -587,30 +623,6 @@ export default async function DashboardPage() {
               >
                 {continueItem.opportunity.summary}
               </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 16,
-                }}
-              >
-                <span style={statusPillStyle}>
-                  {formatStatus(continueItem.status)}
-                </span>
-
-                <span style={statusPillStyle}>
-                  {continueItem.opportunity.category}
-                </span>
-
-                <span style={statusPillStyle}>
-                  Score{" "}
-                  {continueItem.opportunity.opportunity_score ??
-                    "—"}
-                  /10
-                </span>
-              </div>
             </div>
 
             <Link
@@ -692,30 +704,6 @@ export default async function DashboardPage() {
               >
                 {continueLearningItem.path.description}
               </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 16,
-                }}
-              >
-                <span style={statusPillStyle}>
-                  {formatStatus(
-                    continueLearningItem.status
-                  )}
-                </span>
-
-                <span style={statusPillStyle}>
-                  {continueLearningItem.path.experience_level}
-                </span>
-
-                <span style={statusPillStyle}>
-                  {continueLearningItem.path.estimated_time ??
-                    "Flexible"}
-                </span>
-              </div>
             </div>
 
             <Link
@@ -738,58 +726,7 @@ export default async function DashboardPage() {
             footer={`${continueLearningItem.completedModules} of ${continueLearningItem.totalModules} modules completed`}
           />
         </section>
-      ) : (
-        <section
-          className="card"
-          style={{
-            padding: 30,
-            marginBottom: 28,
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#c4b5fd",
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: "uppercase",
-            }}
-          >
-            Continue Learning
-          </p>
-
-          <h2
-            style={{
-              margin: "8px 0 8px",
-              fontSize: 30,
-            }}
-          >
-            Start a practical AI learning path.
-          </h2>
-
-          <p
-            style={{
-              margin: 0,
-              color: "var(--muted)",
-              lineHeight: 1.7,
-            }}
-          >
-            Learn AI through structured modules and save your
-            progress as you go.
-          </p>
-
-          <Link
-            href="/learn"
-            className="btn btn-primary"
-            style={{
-              display: "inline-flex",
-              marginTop: 18,
-            }}
-          >
-            Explore Learning Paths
-          </Link>
-        </section>
-      )}
+      ) : null}
 
       {preferences?.onboarding_complete &&
       recommendedOpportunity ? (
@@ -812,7 +749,7 @@ export default async function DashboardPage() {
               letterSpacing: "0.08em",
             }}
           >
-            Recommended for You
+            Adaptive Recommendation
           </p>
 
           <div
@@ -882,28 +819,85 @@ export default async function DashboardPage() {
                   fontSize: 14,
                 }}
               >
-                Recommended because your primary goal is{" "}
-                <strong>
-                  {preferences.primary_goal}
-                </strong>
-                , your experience level is{" "}
-                <strong>
-                  {preferences.experience_level}
-                </strong>
-                , and your selected interest is{" "}
-                <strong>
-                  {preferences.business_interest}
-                </strong>
-                .
+                Ranked using your saved preferences, current
+                progress, completed work, and previous
+                recommendation activity.
               </p>
             </div>
 
-            <Link
-              href={`/opportunities/${recommendedOpportunity.slug}`}
-              className="btn btn-primary"
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
             >
-              View Recommendation →
-            </Link>
+              <form action={recordRecommendationEvent}>
+                <input
+                  type="hidden"
+                  name="recommendationType"
+                  value="opportunity"
+                />
+
+                <input
+                  type="hidden"
+                  name="recommendationId"
+                  value={recommendedOpportunity.id}
+                />
+
+                <input
+                  type="hidden"
+                  name="eventType"
+                  value="opened"
+                />
+
+                <input
+                  type="hidden"
+                  name="context"
+                  value="dashboard_adaptive_recommendation"
+                />
+
+                <input
+                  type="hidden"
+                  name="destination"
+                  value={`/opportunities/${recommendedOpportunity.slug}`}
+                />
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  View Recommendation →
+                </button>
+              </form>
+
+              <form action={dismissRecommendation}>
+                <input
+                  type="hidden"
+                  name="recommendationType"
+                  value="opportunity"
+                />
+
+                <input
+                  type="hidden"
+                  name="recommendationId"
+                  value={recommendedOpportunity.id}
+                />
+
+                <input
+                  type="hidden"
+                  name="context"
+                  value="dashboard_adaptive_recommendation"
+                />
+
+                <button
+                  type="submit"
+                  style={dismissButtonStyle}
+                >
+                  Not Interested
+                </button>
+              </form>
+            </div>
           </div>
         </section>
       ) : (
@@ -923,7 +917,7 @@ export default async function DashboardPage() {
               textTransform: "uppercase",
             }}
           >
-            Personalize AITFM
+            Adaptive Recommendation
           </p>
 
           <h2
@@ -932,7 +926,7 @@ export default async function DashboardPage() {
               fontSize: 30,
             }}
           >
-            Get recommendations built around your goals.
+            No recommendation is ready right now.
           </h2>
 
           <p
@@ -940,23 +934,21 @@ export default async function DashboardPage() {
               margin: 0,
               color: "var(--muted)",
               lineHeight: 1.7,
-              maxWidth: 760,
             }}
           >
-            Tell us what you want to accomplish with AI so we
-            can prioritize opportunities, tools, and workflows
-            that better fit you.
+            Update your preferences or explore more
+            opportunities to give AITFM more signals.
           </p>
 
           <Link
-            href="/onboarding"
+            href="/opportunities"
             className="btn btn-primary"
             style={{
               display: "inline-flex",
               marginTop: 18,
             }}
           >
-            Personalize My Experience
+            Explore Opportunities
           </Link>
         </section>
       )}
@@ -1138,6 +1130,8 @@ function pickRecommendedOpportunity({
   monthlyBudget,
   completedIds,
   activeIds,
+  dismissedIds,
+  openedCounts,
 }: {
   opportunities: Array<{
     id: string;
@@ -1159,12 +1153,15 @@ function pickRecommendedOpportunity({
   monthlyBudget: string;
   completedIds: Set<string>;
   activeIds: Set<string>;
+  dismissedIds: Set<string>;
+  openedCounts: Map<string, number>;
 }) {
   const ranked = opportunities
     .filter(
       (opportunity) =>
         !completedIds.has(opportunity.id) &&
-        !activeIds.has(opportunity.id)
+        !activeIds.has(opportunity.id) &&
+        !dismissedIds.has(opportunity.id)
     )
     .map((opportunity) => {
       let score =
@@ -1218,6 +1215,11 @@ function pickRecommendedOpportunity({
       ) {
         score += 8;
       }
+
+      const previousOpens =
+        openedCounts.get(opportunity.id) ?? 0;
+
+      score += Math.min(previousOpens * 3, 9);
 
       return {
         ...opportunity,
@@ -1348,25 +1350,6 @@ function DashboardCard({
   );
 }
 
-function formatStatus(status: string) {
-  switch (status) {
-    case "in_progress":
-      return "In Progress";
-
-    case "paused":
-      return "Paused";
-
-    case "saved":
-      return "Saved";
-
-    case "completed":
-      return "Completed";
-
-    default:
-      return status;
-  }
-}
-
 function formatNumber(value: number) {
   return Number.isInteger(value)
     ? value.toLocaleString()
@@ -1393,4 +1376,14 @@ const resultsBadgeStyle = {
   color: "#bbf7d0",
   fontSize: 12,
   fontWeight: 800,
+};
+
+const dismissButtonStyle = {
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.04)",
+  color: "rgba(255,255,255,0.72)",
+  fontWeight: 700,
+  cursor: "pointer",
 };
