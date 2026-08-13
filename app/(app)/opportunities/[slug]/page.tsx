@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  saveOpportunity,
+  startOpportunity,
+  completeOpportunityStep,
+  pauseOpportunity,
+  resumeOpportunity,
+} from "@/app/(app)/opportunities/actions";
 
 type OpportunityDetailPageProps = {
   params: Promise<{
@@ -88,6 +95,13 @@ export default async function OpportunityDetailPage({
     notFound();
   }
 
+  const { data: progress } = await supabase
+    .from("opportunity_progress")
+    .select("status, current_step, started_at, completed_at")
+    .eq("user_id", user.id)
+    .eq("opportunity_id", opportunity.id)
+    .maybeSingle();
+
   const locked = opportunity.is_pro && !isPro;
 
   const executionSteps = Array.isArray(opportunity.execution_steps)
@@ -95,6 +109,18 @@ export default async function OpportunityDetailPage({
         (step): step is string => typeof step === "string"
       )
     : [];
+
+  const completedStepCount =
+    progress?.status === "completed"
+      ? executionSteps.length
+      : progress?.current_step ?? 0;
+
+  const progressPercent =
+    executionSteps.length > 0
+      ? Math.round(
+          (completedStepCount / executionSteps.length) * 100
+        )
+      : 0;
 
   const recommendedStacks =
     opportunity.opportunity_stacks
@@ -261,20 +287,27 @@ export default async function OpportunityDetailPage({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(180px, 1fr))",
             gap: 12,
             marginTop: 28,
           }}
         >
-          <Metric label="Difficulty" value={opportunity.difficulty} />
+          <Metric
+            label="Difficulty"
+            value={opportunity.difficulty}
+          />
+
           <Metric
             label="Startup Cost"
             value={opportunity.startup_cost ?? "Varies"}
           />
+
           <Metric
             label="Time to Launch"
             value={opportunity.time_to_launch ?? "Varies"}
           />
+
           <Metric
             label="Revenue Model"
             value={opportunity.revenue_model ?? "Varies"}
@@ -315,9 +348,10 @@ export default async function OpportunityDetailPage({
               maxWidth: 760,
             }}
           >
-            Pro members get the market-gap analysis, AI advantage,
-            execution plan, recommended AI Stack, and the individual tools
-            needed to act on this opportunity.
+            Pro members get the market-gap analysis, AI
+            advantage, execution plan, recommended AI Stack,
+            and the individual tools needed to act on this
+            opportunity.
           </p>
 
           <Link href="/upgrade" className="btn btn-primary">
@@ -356,6 +390,236 @@ export default async function OpportunityDetailPage({
             content={opportunity.ai_advantage}
           />
 
+          <div
+            className="card"
+            style={{
+              padding: 30,
+              border: "1px solid rgba(96,165,250,0.24)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#60a5fa",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+              }}
+            >
+              Your Progress
+            </p>
+
+            <h2
+              style={{
+                margin: "8px 0 10px",
+                fontSize: 30,
+              }}
+            >
+              {progress?.status === "in_progress"
+                ? "You are working on this opportunity."
+                : progress?.status === "completed"
+                  ? "Opportunity completed."
+                  : progress?.status === "paused"
+                    ? "This opportunity is paused."
+                    : progress?.status === "saved"
+                      ? "Saved for later."
+                      : "Ready to begin?"}
+            </h2>
+
+            <p
+              style={{
+                margin: 0,
+                color: "var(--muted)",
+                lineHeight: 1.7,
+              }}
+            >
+              {progress?.status === "in_progress"
+                ? `Current progress: Step ${Math.min(
+                    completedStepCount + 1,
+                    executionSteps.length
+                  )} of ${executionSteps.length}.`
+                : progress?.status === "paused"
+                  ? `Paused at Step ${Math.min(
+                      completedStepCount + 1,
+                      executionSteps.length
+                    )} of ${executionSteps.length}. Your progress has been saved.`
+                  : progress?.status === "completed"
+                    ? `All ${executionSteps.length} execution steps are complete.`
+                    : progress?.status === "saved"
+                      ? "This opportunity is saved to your account. Start it when you are ready."
+                      : "Save this opportunity for later or start working through the execution plan now."}
+            </p>
+
+            {progress?.status === "in_progress" ||
+            progress?.status === "paused" ||
+            progress?.status === "completed" ? (
+              <div style={{ marginTop: 18 }}>
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${progressPercent}%`,
+                      height: "100%",
+                      background: "#2563eb",
+                    }}
+                  />
+                </div>
+
+                <p
+                  style={{
+                    margin: "8px 0 0",
+                    color: "var(--muted)",
+                    fontSize: 13,
+                  }}
+                >
+                  {progressPercent}% complete
+                </p>
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              {!progress ? (
+                <>
+                  <form action={saveOpportunity}>
+                    <input
+                      type="hidden"
+                      name="opportunityId"
+                      value={opportunity.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="opportunitySlug"
+                      value={opportunity.slug}
+                    />
+
+                    <button
+                      type="submit"
+                      style={secondaryButtonStyle}
+                    >
+                      Save Opportunity
+                    </button>
+                  </form>
+
+                  <form action={startOpportunity}>
+                    <input
+                      type="hidden"
+                      name="opportunityId"
+                      value={opportunity.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="opportunitySlug"
+                      value={opportunity.slug}
+                    />
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                    >
+                      Start Opportunity
+                    </button>
+                  </form>
+                </>
+              ) : null}
+
+              {progress?.status === "saved" ? (
+                <>
+                  <span style={savedBadgeButtonStyle}>
+                    Saved ✓
+                  </span>
+
+                  <form action={startOpportunity}>
+                    <input
+                      type="hidden"
+                      name="opportunityId"
+                      value={opportunity.id}
+                    />
+
+                    <input
+                      type="hidden"
+                      name="opportunitySlug"
+                      value={opportunity.slug}
+                    />
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                    >
+                      Start Opportunity
+                    </button>
+                  </form>
+                </>
+              ) : null}
+
+              {progress?.status === "in_progress" ? (
+                <form action={pauseOpportunity}>
+                  <input
+                    type="hidden"
+                    name="opportunityId"
+                    value={opportunity.id}
+                  />
+
+                  <input
+                    type="hidden"
+                    name="opportunitySlug"
+                    value={opportunity.slug}
+                  />
+
+                  <button
+                    type="submit"
+                    style={pauseButtonStyle}
+                  >
+                    Pause Opportunity
+                  </button>
+                </form>
+              ) : null}
+
+              {progress?.status === "paused" ? (
+                <form action={resumeOpportunity}>
+                  <input
+                    type="hidden"
+                    name="opportunityId"
+                    value={opportunity.id}
+                  />
+
+                  <input
+                    type="hidden"
+                    name="opportunitySlug"
+                    value={opportunity.slug}
+                  />
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                  >
+                    Resume Opportunity
+                  </button>
+                </form>
+              ) : null}
+
+              {progress?.status === "completed" ? (
+                <span style={completedBadgeStyle}>
+                  Completed ✓
+                </span>
+              ) : null}
+            </div>
+          </div>
+
           <div className="card" style={{ padding: 30 }}>
             <p
               style={{
@@ -369,52 +633,134 @@ export default async function OpportunityDetailPage({
               Execution Plan
             </p>
 
-            <h2 style={{ margin: "8px 0 22px", fontSize: 30 }}>
+            <h2
+              style={{
+                margin: "8px 0 22px",
+                fontSize: 30,
+              }}
+            >
               Turn the opportunity into action.
             </h2>
 
             <div style={{ display: "grid", gap: 14 }}>
-              {executionSteps.map((step, index) => (
-                <div
-                  key={`${opportunity.id}-${index}`}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "44px 1fr",
-                    gap: 16,
-                    alignItems: "flex-start",
-                    padding: 18,
-                    borderRadius: 16,
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    background: "rgba(255,255,255,0.035)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 999,
-                      display: "grid",
-                      placeItems: "center",
-                      background: "rgba(37,99,235,0.18)",
-                      border: "1px solid rgba(96,165,250,0.3)",
-                      color: "#bfdbfe",
-                      fontWeight: 900,
-                    }}
-                  >
-                    {index + 1}
-                  </div>
+              {executionSteps.map((step, index) => {
+                const isCompleted =
+                  index < completedStepCount;
 
-                  <p
+                const isCurrent =
+                  progress?.status === "in_progress" &&
+                  index === completedStepCount;
+
+                const isPausedCurrent =
+                  progress?.status === "paused" &&
+                  index === completedStepCount;
+
+                return (
+                  <div
+                    key={`${opportunity.id}-${index}`}
                     style={{
-                      margin: 0,
-                      color: "rgba(255,255,255,0.84)",
-                      lineHeight: 1.7,
+                      display: "grid",
+                      gridTemplateColumns: "44px 1fr",
+                      gap: 16,
+                      alignItems: "flex-start",
+                      padding: 18,
+                      borderRadius: 16,
+                      border:
+                        isCurrent || isPausedCurrent
+                          ? "1px solid rgba(96,165,250,0.35)"
+                          : "1px solid rgba(255,255,255,0.08)",
+                      background: isCompleted
+                        ? "rgba(34,197,94,0.06)"
+                        : isCurrent
+                          ? "rgba(37,99,235,0.06)"
+                          : isPausedCurrent
+                            ? "rgba(251,191,36,0.05)"
+                            : "rgba(255,255,255,0.035)",
                     }}
                   >
-                    {step}
-                  </p>
-                </div>
-              ))}
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 999,
+                        display: "grid",
+                        placeItems: "center",
+                        background: isCompleted
+                          ? "rgba(34,197,94,0.14)"
+                          : "rgba(37,99,235,0.18)",
+                        border: isCompleted
+                          ? "1px solid rgba(34,197,94,0.28)"
+                          : "1px solid rgba(96,165,250,0.3)",
+                        color: isCompleted
+                          ? "#bbf7d0"
+                          : "#bfdbfe",
+                        fontWeight: 900,
+                      }}
+                    >
+                      {isCompleted ? "✓" : index + 1}
+                    </div>
+
+                    <div>
+                      <p
+                        style={{
+                          margin: 0,
+                          color: isCompleted
+                            ? "rgba(255,255,255,0.62)"
+                            : "rgba(255,255,255,0.84)",
+                          lineHeight: 1.7,
+                        }}
+                      >
+                        {step}
+                      </p>
+
+                      {isCurrent ? (
+                        <form
+                          action={completeOpportunityStep}
+                          style={{ marginTop: 14 }}
+                        >
+                          <input
+                            type="hidden"
+                            name="opportunityId"
+                            value={opportunity.id}
+                          />
+
+                          <input
+                            type="hidden"
+                            name="opportunitySlug"
+                            value={opportunity.slug}
+                          />
+
+                          <input
+                            type="hidden"
+                            name="totalSteps"
+                            value={executionSteps.length}
+                          />
+
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                          >
+                            Mark Step Complete
+                          </button>
+                        </form>
+                      ) : null}
+
+                      {isPausedCurrent ? (
+                        <p
+                          style={{
+                            margin: "12px 0 0",
+                            color: "#fde68a",
+                            fontSize: 13,
+                            fontWeight: 700,
+                          }}
+                        >
+                          Resume this opportunity to continue.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -431,56 +777,72 @@ export default async function OpportunityDetailPage({
               Recommended AI Stack
             </p>
 
-            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+            <h2
+              style={{
+                margin: "8px 0 20px",
+                fontSize: 30,
+              }}
+            >
               Use a complete workflow.
             </h2>
 
             {recommendedStacks.length > 0 ? (
               <div style={{ display: "grid", gap: 14 }}>
-                {recommendedStacks.map(({ stack, reason }) => (
-                  <div
-                    key={stack.id}
-                    style={{
-                      padding: 20,
-                      borderRadius: 16,
-                      border: "1px solid rgba(96,165,250,0.2)",
-                      background: "rgba(37,99,235,0.06)",
-                    }}
-                  >
+                {recommendedStacks.map(
+                  ({ stack, reason }) => (
                     <div
+                      key={stack.id}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 16,
-                        flexWrap: "wrap",
+                        padding: 20,
+                        borderRadius: 16,
+                        border:
+                          "1px solid rgba(96,165,250,0.2)",
+                        background:
+                          "rgba(37,99,235,0.06)",
                       }}
                     >
-                      <div style={{ maxWidth: 720 }}>
-                        <h3 style={{ margin: 0, fontSize: 24 }}>
-                          {stack.name}
-                        </h3>
-
-                        <p
-                          style={{
-                            margin: "8px 0 0",
-                            color: "var(--muted)",
-                            lineHeight: 1.65,
-                          }}
-                        >
-                          {reason || stack.description}
-                        </p>
-                      </div>
-
-                      <Link
-                        href={`/stacks/${stack.slug}`}
-                        className="btn btn-primary"
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems: "flex-start",
+                          gap: 16,
+                          flexWrap: "wrap",
+                        }}
                       >
-                        Open Workflow →
-                      </Link>
+                        <div style={{ maxWidth: 720 }}>
+                          <h3
+                            style={{
+                              margin: 0,
+                              fontSize: 24,
+                            }}
+                          >
+                            {stack.name}
+                          </h3>
+
+                          <p
+                            style={{
+                              margin: "8px 0 0",
+                              color: "var(--muted)",
+                              lineHeight: 1.65,
+                            }}
+                          >
+                            {reason ||
+                              stack.description}
+                          </p>
+                        </div>
+
+                        <Link
+                          href={`/stacks/${stack.slug}`}
+                          className="btn btn-primary"
+                        >
+                          Open Workflow →
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             ) : (
               <p style={{ color: "var(--muted)" }}>
@@ -502,7 +864,12 @@ export default async function OpportunityDetailPage({
               Recommended Tools
             </p>
 
-            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+            <h2
+              style={{
+                margin: "8px 0 20px",
+                fontSize: 30,
+              }}
+            >
               The individual tools behind the workflow.
             </h2>
 
@@ -515,74 +882,89 @@ export default async function OpportunityDetailPage({
                   gap: 14,
                 }}
               >
-                {recommendedTools.map(({ tool, reason }, index) => (
-                  <div
-                    key={tool.id}
-                    style={{
-                      padding: 20,
-                      borderRadius: 16,
-                      border: "1px solid rgba(255,255,255,0.09)",
-                      background: "rgba(255,255,255,0.035)",
-                    }}
-                  >
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#60a5fa",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Tool {index + 1}
-                    </p>
-
-                    <h3 style={{ margin: "8px 0 0", fontSize: 22 }}>
-                      {tool.name}
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: "8px 0 0",
-                        color: "var(--muted)",
-                        lineHeight: 1.6,
-                        fontSize: 14,
-                      }}
-                    >
-                      {reason || tool.tagline}
-                    </p>
-
+                {recommendedTools.map(
+                  ({ tool, reason }, index) => (
                     <div
+                      key={tool.id}
                       style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginTop: 14,
+                        padding: 20,
+                        borderRadius: 16,
+                        border:
+                          "1px solid rgba(255,255,255,0.09)",
+                        background:
+                          "rgba(255,255,255,0.035)",
                       }}
                     >
-                      <span style={smallMetricStyle}>
-                        {tool.pricing_model ?? "Pricing varies"}
-                      </span>
+                      <p
+                        style={{
+                          margin: 0,
+                          color: "#60a5fa",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          textTransform:
+                            "uppercase",
+                        }}
+                      >
+                        Tool {index + 1}
+                      </p>
 
-                      <span style={smallMetricStyle}>
-                        ★ {tool.rating ?? "New"}
-                      </span>
+                      <h3
+                        style={{
+                          margin: "8px 0 0",
+                          fontSize: 22,
+                        }}
+                      >
+                        {tool.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          margin: "8px 0 0",
+                          color: "var(--muted)",
+                          lineHeight: 1.6,
+                          fontSize: 14,
+                        }}
+                      >
+                        {reason || tool.tagline}
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          marginTop: 14,
+                        }}
+                      >
+                        <span
+                          style={smallMetricStyle}
+                        >
+                          {tool.pricing_model ??
+                            "Pricing varies"}
+                        </span>
+
+                        <span
+                          style={smallMetricStyle}
+                        >
+                          ★ {tool.rating ?? "New"}
+                        </span>
+                      </div>
+
+                      <Link
+                        href={`/tools/${tool.slug}`}
+                        style={{
+                          display: "inline-flex",
+                          marginTop: 16,
+                          color: "#93c5fd",
+                          textDecoration: "none",
+                          fontWeight: 700,
+                        }}
+                      >
+                        View Tool →
+                      </Link>
                     </div>
-
-                    <Link
-                      href={`/tools/${tool.slug}`}
-                      style={{
-                        display: "inline-flex",
-                        marginTop: 16,
-                        color: "#93c5fd",
-                        textDecoration: "none",
-                        fontWeight: 700,
-                      }}
-                    >
-                      View Tool →
-                    </Link>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             ) : (
               <p style={{ color: "var(--muted)" }}>
@@ -611,7 +993,12 @@ export default async function OpportunityDetailPage({
               Your Next Move
             </p>
 
-            <h2 style={{ margin: "8px 0 10px", fontSize: 30 }}>
+            <h2
+              style={{
+                margin: "8px 0 10px",
+                fontSize: 30,
+              }}
+            >
               Move from research to execution.
             </h2>
 
@@ -623,8 +1010,9 @@ export default async function OpportunityDetailPage({
                 maxWidth: 800,
               }}
             >
-              Review the execution plan, open the recommended AI Stack,
-              and evaluate the individual tools before investing time or
+              Review the execution plan, open the
+              recommended AI Stack, and evaluate the
+              individual tools before investing time or
               money into implementation.
             </p>
 
@@ -647,16 +1035,7 @@ export default async function OpportunityDetailPage({
 
               <Link
                 href="/opportunities"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  padding: "10px 16px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,0.16)",
-                  color: "#ffffff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
+                style={secondaryLinkStyle}
               >
                 Explore More Opportunities
               </Link>
@@ -732,7 +1111,12 @@ function InfoSection({
         {eyebrow}
       </p>
 
-      <h2 style={{ margin: "8px 0 10px", fontSize: 28 }}>
+      <h2
+        style={{
+          margin: "8px 0 10px",
+          fontSize: 28,
+        }}
+      >
         {title}
       </h2>
 
@@ -794,5 +1178,58 @@ const smallMetricStyle = {
   background: "rgba(255,255,255,0.05)",
   color: "#dbeafe",
   fontSize: 12,
+  fontWeight: 700,
+};
+
+const secondaryButtonStyle = {
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.16)",
+  background: "rgba(255,255,255,0.05)",
+  color: "#ffffff",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const savedBadgeButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(34,197,94,0.22)",
+  background: "rgba(34,197,94,0.08)",
+  color: "#bbf7d0",
+  fontWeight: 700,
+};
+
+const pauseButtonStyle = {
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(251,191,36,0.28)",
+  background: "rgba(251,191,36,0.08)",
+  color: "#fde68a",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const completedBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(34,197,94,0.28)",
+  background: "rgba(34,197,94,0.1)",
+  color: "#bbf7d0",
+  fontWeight: 800,
+};
+
+const secondaryLinkStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "10px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.16)",
+  color: "#ffffff",
+  textDecoration: "none",
   fontWeight: 700,
 };
