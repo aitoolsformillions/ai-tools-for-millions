@@ -138,6 +138,97 @@ export default async function DashboardPage() {
 
   const continueItem = activeItems[0] ?? null;
 
+  const { data: learningProgressRows, error: learningProgressError } =
+    await supabase
+      .from("member_learning_progress")
+      .select(`
+        id,
+        status,
+        current_module,
+        started_at,
+        completed_at,
+        last_opened_at,
+        learning_paths (
+          id,
+          title,
+          slug,
+          description,
+          experience_level,
+          estimated_time,
+          modules,
+          is_pro,
+          is_featured
+        )
+      `)
+      .eq("user_id", user.id)
+      .order("last_opened_at", { ascending: false });
+
+  if (learningProgressError) {
+    console.error(
+      "Dashboard learning progress error:",
+      learningProgressError.message
+    );
+  }
+
+  const learningItems =
+    learningProgressRows
+      ?.flatMap((row) => {
+        const paths = Array.isArray(row.learning_paths)
+          ? row.learning_paths
+          : row.learning_paths
+            ? [row.learning_paths]
+            : [];
+
+        return paths.map((path) => {
+          const modules = Array.isArray(path.modules)
+            ? path.modules
+            : [];
+
+          const totalModules = modules.length;
+
+          const completedModules =
+            row.status === "completed"
+              ? totalModules
+              : Math.min(
+                  row.current_module ?? 0,
+                  totalModules
+                );
+
+          const progressPercent =
+            totalModules > 0
+              ? Math.round(
+                  (completedModules / totalModules) * 100
+                )
+              : 0;
+
+          return {
+            id: row.id,
+            status: row.status,
+            currentModule: row.current_module ?? 0,
+            startedAt: row.started_at,
+            completedAt: row.completed_at,
+            lastOpenedAt: row.last_opened_at,
+            path,
+            totalModules,
+            completedModules,
+            progressPercent,
+          };
+        });
+      }) ?? [];
+
+  const activeLearningItems = learningItems.filter(
+    (item) =>
+      item.status === "in_progress" ||
+      item.status === "paused"
+  );
+
+  const completedLearningItems = learningItems.filter(
+    (item) => item.status === "completed"
+  );
+
+  const continueLearningItem =
+    activeLearningItems[0] ?? null;
+
   const preferredCategory = mapGoalToCategory(
     preferences?.primary_goal
   );
@@ -253,7 +344,7 @@ export default async function DashboardPage() {
             maxWidth: 760,
           }}
         >
-          Discover opportunities, build AI-powered workflows,
+          Learn AI, discover opportunities, build workflows,
           and continue where you left off.
         </p>
       </section>
@@ -273,13 +364,18 @@ export default async function DashboardPage() {
         />
 
         <StatCard
-          label="Saved for Later"
-          value={savedItems.length}
+          label="Active Learning"
+          value={activeLearningItems.length}
         />
 
         <StatCard
-          label="Completed"
+          label="Completed Builds"
           value={completedItems.length}
+        />
+
+        <StatCard
+          label="Completed Learning"
+          value={completedLearningItems.length}
         />
 
         <StatCard
@@ -380,59 +476,173 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          <div style={{ marginTop: 24 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 16,
-                marginBottom: 8,
-                color: "var(--muted)",
-                fontSize: 13,
-              }}
-            >
-              <span>
-                {continueItem.status === "paused"
-                  ? "Paused"
-                  : "Progress"}
-              </span>
-
-              <span>
-                {continueItem.progressPercent}% complete
-              </span>
-            </div>
-
-            <div
-              style={{
-                height: 11,
-                borderRadius: 999,
-                overflow: "hidden",
-                background: "rgba(255,255,255,0.08)",
-              }}
-            >
-              <div
-                style={{
-                  width: `${continueItem.progressPercent}%`,
-                  height: "100%",
-                  background: "#2563eb",
-                }}
-              />
-            </div>
-
-            <p
-              style={{
-                margin: "10px 0 0",
-                color: "var(--muted)",
-                fontSize: 13,
-              }}
-            >
-              {continueItem.totalSteps > 0
-                ? `${continueItem.completedSteps} of ${continueItem.totalSteps} execution steps completed`
-                : "Execution plan available"}
-            </p>
-          </div>
+          <ProgressBar
+            label={
+              continueItem.status === "paused"
+                ? "Paused"
+                : "Progress"
+            }
+            percent={continueItem.progressPercent}
+            footer={`${continueItem.completedSteps} of ${continueItem.totalSteps} execution steps completed`}
+          />
         </section>
       ) : null}
+
+      {continueLearningItem ? (
+        <section
+          className="card"
+          style={{
+            padding: "clamp(24px, 5vw, 38px)",
+            marginBottom: 28,
+            border:
+              continueLearningItem.status === "paused"
+                ? "1px solid rgba(251,191,36,0.28)"
+                : "1px solid rgba(167,139,250,0.3)",
+            background: "rgba(139,92,246,0.04)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 22,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ maxWidth: 760 }}>
+              <p
+                style={{
+                  margin: 0,
+                  color:
+                    continueLearningItem.status === "paused"
+                      ? "#fde68a"
+                      : "#c4b5fd",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Continue Learning
+              </p>
+
+              <h2
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: "clamp(28px, 5vw, 40px)",
+                }}
+              >
+                {continueLearningItem.path.title}
+              </h2>
+
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  color: "var(--muted)",
+                  lineHeight: 1.7,
+                }}
+              >
+                {continueLearningItem.path.description}
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 16,
+                }}
+              >
+                <span style={statusPillStyle}>
+                  {formatStatus(
+                    continueLearningItem.status
+                  )}
+                </span>
+
+                <span style={statusPillStyle}>
+                  {continueLearningItem.path.experience_level}
+                </span>
+
+                <span style={statusPillStyle}>
+                  {continueLearningItem.path.estimated_time ??
+                    "Flexible"}
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href={`/learn/${continueLearningItem.path.slug}`}
+              className="btn btn-primary"
+            >
+              {continueLearningItem.status === "paused"
+                ? "Resume Learning →"
+                : "Continue Learning →"}
+            </Link>
+          </div>
+
+          <ProgressBar
+            label={
+              continueLearningItem.status === "paused"
+                ? "Paused"
+                : "Learning Progress"
+            }
+            percent={continueLearningItem.progressPercent}
+            footer={`${continueLearningItem.completedModules} of ${continueLearningItem.totalModules} modules completed`}
+          />
+        </section>
+      ) : (
+        <section
+          className="card"
+          style={{
+            padding: 30,
+            marginBottom: 28,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#c4b5fd",
+              fontSize: 12,
+              fontWeight: 800,
+              textTransform: "uppercase",
+            }}
+          >
+            Continue Learning
+          </p>
+
+          <h2
+            style={{
+              margin: "8px 0 8px",
+              fontSize: 30,
+            }}
+          >
+            Start a practical AI learning path.
+          </h2>
+
+          <p
+            style={{
+              margin: 0,
+              color: "var(--muted)",
+              lineHeight: 1.7,
+            }}
+          >
+            Learn AI through structured modules and save your
+            progress as you go.
+          </p>
+
+          <Link
+            href="/learn"
+            className="btn btn-primary"
+            style={{
+              display: "inline-flex",
+              marginTop: 18,
+            }}
+          >
+            Explore Learning Paths
+          </Link>
+        </section>
+      )}
 
       {preferences?.onboarding_complete &&
       recommendedOpportunity ? (
@@ -613,6 +823,14 @@ export default async function DashboardPage() {
         }}
       >
         <DashboardCard
+          eyebrow="AITFM Learning"
+          title="Build practical AI skills"
+          description="Follow personalized learning paths and apply what you learn through tools, stacks, and opportunities."
+          href="/learn"
+          linkText="Explore Learning Paths →"
+        />
+
+        <DashboardCard
           eyebrow="Opportunity Engine"
           title="Find your next AI opportunity"
           description="Explore practical ideas for making money, saving time, and finding underserved market needs."
@@ -653,8 +871,8 @@ export default async function DashboardPage() {
           }
           description={
             isPro
-              ? "You have access to Pro opportunities, premium AI Stacks, and guided implementation resources."
-              : "Upgrade to unlock premium opportunities, AI Stacks, workflows, and future member intelligence."
+              ? "You have access to Pro opportunities, premium learning paths, AI Stacks, and guided implementation resources."
+              : "Upgrade to unlock premium opportunities, learning paths, AI Stacks, and future member intelligence."
           }
           href={isPro ? "/settings" : "/upgrade"}
           linkText={
@@ -665,6 +883,61 @@ export default async function DashboardPage() {
         />
       </section>
     </main>
+  );
+}
+
+function ProgressBar({
+  label,
+  percent,
+  footer,
+}: {
+  label: string;
+  percent: number;
+  footer: string;
+}) {
+  return (
+    <div style={{ marginTop: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 16,
+          marginBottom: 8,
+          color: "var(--muted)",
+          fontSize: 13,
+        }}
+      >
+        <span>{label}</span>
+        <span>{percent}% complete</span>
+      </div>
+
+      <div
+        style={{
+          height: 11,
+          borderRadius: 999,
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.08)",
+        }}
+      >
+        <div
+          style={{
+            width: `${percent}%`,
+            height: "100%",
+            background: "#2563eb",
+          }}
+        />
+      </div>
+
+      <p
+        style={{
+          margin: "10px 0 0",
+          color: "var(--muted)",
+          fontSize: 13,
+        }}
+      >
+        {footer}
+      </p>
+    </div>
   );
 }
 
