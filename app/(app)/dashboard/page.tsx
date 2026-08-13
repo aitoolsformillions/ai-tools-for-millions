@@ -22,6 +22,19 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .maybeSingle();
 
+  const { data: preferences } = await supabase
+    .from("member_preferences")
+    .select(`
+      primary_goal,
+      experience_level,
+      business_interest,
+      weekly_time,
+      monthly_budget,
+      onboarding_complete
+    `)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const displayName =
     profile?.display_name ||
     user.user_metadata?.display_name ||
@@ -125,6 +138,58 @@ export default async function DashboardPage() {
 
   const continueItem = activeItems[0] ?? null;
 
+  const preferredCategory = mapGoalToCategory(
+    preferences?.primary_goal
+  );
+
+  const { data: recommendationCandidates, error: recommendationError } =
+    await supabase
+      .from("opportunities")
+      .select(`
+        id,
+        title,
+        slug,
+        summary,
+        category,
+        difficulty,
+        startup_cost,
+        time_to_launch,
+        opportunity_score,
+        is_pro,
+        is_featured,
+        target_customer
+      `)
+      .eq("status", "published")
+      .order("opportunity_score", { ascending: false });
+
+  if (recommendationError) {
+    console.error(
+      "Dashboard recommendation error:",
+      recommendationError.message
+    );
+  }
+
+  const recommendedOpportunity = pickRecommendedOpportunity({
+    opportunities: recommendationCandidates ?? [],
+    preferredCategory,
+    experienceLevel:
+      preferences?.experience_level ?? "Beginner",
+    businessInterest:
+      preferences?.business_interest ?? "Other",
+    monthlyBudget:
+      preferences?.monthly_budget ?? "$0-$100",
+    completedIds: new Set(
+      completedItems.map(
+        (item) => item.opportunity.id
+      )
+    ),
+    activeIds: new Set(
+      activeItems.map(
+        (item) => item.opportunity.id
+      )
+    ),
+  });
+
   return (
     <main
       className="container"
@@ -188,8 +253,8 @@ export default async function DashboardPage() {
             maxWidth: 760,
           }}
         >
-          Discover opportunities, build AI-powered
-          workflows, and continue where you left off.
+          Discover opportunities, build AI-powered workflows,
+          and continue where you left off.
         </p>
       </section>
 
@@ -367,6 +432,123 @@ export default async function DashboardPage() {
             </p>
           </div>
         </section>
+      ) : null}
+
+      {preferences?.onboarding_complete &&
+      recommendedOpportunity ? (
+        <section
+          className="card"
+          style={{
+            padding: "clamp(24px, 5vw, 38px)",
+            marginBottom: 28,
+            border: "1px solid rgba(34,197,94,0.24)",
+            background: "rgba(34,197,94,0.04)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#86efac",
+              fontSize: 12,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            Recommended for You
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 22,
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+              marginTop: 8,
+            }}
+          >
+            <div style={{ maxWidth: 780 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(28px, 5vw, 40px)",
+                }}
+              >
+                {recommendedOpportunity.title}
+              </h2>
+
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  color: "var(--muted)",
+                  lineHeight: 1.7,
+                }}
+              >
+                {recommendedOpportunity.summary}
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 16,
+                }}
+              >
+                <span style={statusPillStyle}>
+                  {recommendedOpportunity.category}
+                </span>
+
+                <span style={statusPillStyle}>
+                  {recommendedOpportunity.difficulty}
+                </span>
+
+                <span style={statusPillStyle}>
+                  {recommendedOpportunity.startup_cost ??
+                    "Cost varies"}
+                </span>
+
+                <span style={statusPillStyle}>
+                  Score{" "}
+                  {recommendedOpportunity.opportunity_score ??
+                    "—"}
+                  /10
+                </span>
+              </div>
+
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  color: "#bbf7d0",
+                  lineHeight: 1.6,
+                  fontSize: 14,
+                }}
+              >
+                Recommended because your primary goal is{" "}
+                <strong>
+                  {preferences.primary_goal}
+                </strong>
+                , your experience level is{" "}
+                <strong>
+                  {preferences.experience_level}
+                </strong>
+                , and your selected interest is{" "}
+                <strong>
+                  {preferences.business_interest}
+                </strong>
+                .
+              </p>
+            </div>
+
+            <Link
+              href={`/opportunities/${recommendedOpportunity.slug}`}
+              className="btn btn-primary"
+            >
+              View Recommendation →
+            </Link>
+          </div>
+        </section>
       ) : (
         <section
           className="card"
@@ -384,7 +566,7 @@ export default async function DashboardPage() {
               textTransform: "uppercase",
             }}
           >
-            Continue Building
+            Personalize AITFM
           </p>
 
           <h2
@@ -393,7 +575,7 @@ export default async function DashboardPage() {
               fontSize: 30,
             }}
           >
-            Start your first AI opportunity.
+            Get recommendations built around your goals.
           </h2>
 
           <p
@@ -401,21 +583,23 @@ export default async function DashboardPage() {
               margin: 0,
               color: "var(--muted)",
               lineHeight: 1.7,
+              maxWidth: 760,
             }}
           >
-            Choose an opportunity and AITFM will help you
-            move from research to execution step by step.
+            Tell us what you want to accomplish with AI so
+            we can prioritize opportunities, tools, and
+            workflows that better fit you.
           </p>
 
           <Link
-            href="/opportunities"
+            href="/onboarding"
             className="btn btn-primary"
             style={{
               display: "inline-flex",
               marginTop: 18,
             }}
           >
-            Explore Opportunities
+            Personalize My Experience
           </Link>
         </section>
       )}
@@ -453,6 +637,14 @@ export default async function DashboardPage() {
         />
 
         <DashboardCard
+          eyebrow="Personalization"
+          title="Update your AI goals"
+          description="Change your goals, experience level, business interests, time availability, or budget."
+          href="/onboarding"
+          linkText="Update Preferences →"
+        />
+
+        <DashboardCard
           eyebrow="Membership"
           title={
             isPro
@@ -476,6 +668,128 @@ export default async function DashboardPage() {
   );
 }
 
+function pickRecommendedOpportunity({
+  opportunities,
+  preferredCategory,
+  experienceLevel,
+  businessInterest,
+  monthlyBudget,
+  completedIds,
+  activeIds,
+}: {
+  opportunities: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    summary: string;
+    category: string;
+    difficulty: string;
+    startup_cost: string | null;
+    time_to_launch: string | null;
+    opportunity_score: number | null;
+    is_pro: boolean;
+    is_featured: boolean;
+    target_customer: string;
+  }>;
+  preferredCategory: string | null;
+  experienceLevel: string;
+  businessInterest: string;
+  monthlyBudget: string;
+  completedIds: Set<string>;
+  activeIds: Set<string>;
+}) {
+  const ranked = opportunities
+    .filter(
+      (opportunity) =>
+        !completedIds.has(opportunity.id) &&
+        !activeIds.has(opportunity.id)
+    )
+    .map((opportunity) => {
+      let score =
+        Number(opportunity.opportunity_score ?? 0) * 10;
+
+      if (
+        preferredCategory &&
+        opportunity.category === preferredCategory
+      ) {
+        score += 30;
+      }
+
+      if (
+        opportunity.difficulty === experienceLevel
+      ) {
+        score += 14;
+      }
+
+      if (
+        experienceLevel === "Beginner" &&
+        opportunity.difficulty === "Intermediate"
+      ) {
+        score -= 6;
+      }
+
+      if (
+        experienceLevel === "Advanced" &&
+        opportunity.difficulty === "Beginner"
+      ) {
+        score -= 3;
+      }
+
+      if (
+        businessInterest !== "Other" &&
+        opportunity.target_customer
+          .toLowerCase()
+          .includes(
+            businessInterest.toLowerCase()
+          )
+      ) {
+        score += 18;
+      }
+
+      if (opportunity.is_featured) {
+        score += 6;
+      }
+
+      if (
+        monthlyBudget === "$0-$100" &&
+        opportunity.startup_cost?.includes("$0-")
+      ) {
+        score += 8;
+      }
+
+      return {
+        ...opportunity,
+        recommendationScore: score,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.recommendationScore -
+        a.recommendationScore
+    );
+
+  return ranked[0] ?? null;
+}
+
+function mapGoalToCategory(
+  goal: string | undefined
+) {
+  switch (goal) {
+    case "Make Money":
+      return "Make Money";
+
+    case "Save Time":
+      return "Save Time";
+
+    case "Find Market Gaps":
+      return "Market Gaps";
+
+    case "Learn AI":
+    default:
+      return null;
+  }
+}
+
 function StatCard({
   label,
   value,
@@ -484,12 +798,7 @@ function StatCard({
   value: number | string;
 }) {
   return (
-    <div
-      className="card"
-      style={{
-        padding: 20,
-      }}
-    >
+    <div className="card" style={{ padding: 20 }}>
       <p
         style={{
           margin: 0,
