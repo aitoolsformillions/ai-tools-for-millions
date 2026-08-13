@@ -8,6 +8,7 @@ import {
   pauseOpportunity,
   resumeOpportunity,
 } from "@/app/(app)/opportunities/actions";
+import { RecordOutcomeForm } from "@/components/record-outcome-form";
 
 type OpportunityDetailPageProps = {
   params: Promise<{
@@ -101,6 +102,29 @@ export default async function OpportunityDetailPage({
     .eq("user_id", user.id)
     .eq("opportunity_id", opportunity.id)
     .maybeSingle();
+
+  const { data: outcomes, error: outcomesError } = await supabase
+    .from("member_outcomes")
+    .select(`
+      id,
+      outcome_type,
+      numeric_value,
+      unit,
+      summary,
+      notes,
+      created_at
+    `)
+    .eq("user_id", user.id)
+    .eq("source_type", "opportunity")
+    .eq("source_id", opportunity.id)
+    .order("created_at", { ascending: false });
+
+  if (outcomesError) {
+    console.error(
+      "Opportunity outcomes load error:",
+      outcomesError.message
+    );
+  }
 
   const locked = opportunity.is_pro && !isPro;
 
@@ -350,8 +374,8 @@ export default async function OpportunityDetailPage({
           >
             Pro members get the market-gap analysis, AI
             advantage, execution plan, recommended AI Stack,
-            and the individual tools needed to act on this
-            opportunity.
+            connected tools, progress tracking, and outcome
+            reporting.
           </p>
 
           <Link href="/upgrade" className="btn btn-primary">
@@ -397,17 +421,7 @@ export default async function OpportunityDetailPage({
               border: "1px solid rgba(96,165,250,0.24)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
-              Your Progress
-            </p>
+            <p style={blueEyebrowStyle}>Your Progress</p>
 
             <h2
               style={{
@@ -453,34 +467,7 @@ export default async function OpportunityDetailPage({
             {progress?.status === "in_progress" ||
             progress?.status === "paused" ||
             progress?.status === "completed" ? (
-              <div style={{ marginTop: 18 }}>
-                <div
-                  style={{
-                    height: 10,
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    background: "rgba(255,255,255,0.08)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${progressPercent}%`,
-                      height: "100%",
-                      background: "#2563eb",
-                    }}
-                  />
-                </div>
-
-                <p
-                  style={{
-                    margin: "8px 0 0",
-                    color: "var(--muted)",
-                    fontSize: 13,
-                  }}
-                >
-                  {progressPercent}% complete
-                </p>
-              </div>
+              <ProgressBar percent={progressPercent} />
             ) : null}
 
             <div
@@ -494,16 +481,9 @@ export default async function OpportunityDetailPage({
               {!progress ? (
                 <>
                   <form action={saveOpportunity}>
-                    <input
-                      type="hidden"
-                      name="opportunityId"
-                      value={opportunity.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="opportunitySlug"
-                      value={opportunity.slug}
+                    <OpportunityHiddenFields
+                      opportunityId={opportunity.id}
+                      opportunitySlug={opportunity.slug}
                     />
 
                     <button
@@ -515,16 +495,9 @@ export default async function OpportunityDetailPage({
                   </form>
 
                   <form action={startOpportunity}>
-                    <input
-                      type="hidden"
-                      name="opportunityId"
-                      value={opportunity.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="opportunitySlug"
-                      value={opportunity.slug}
+                    <OpportunityHiddenFields
+                      opportunityId={opportunity.id}
+                      opportunitySlug={opportunity.slug}
                     />
 
                     <button
@@ -539,21 +512,14 @@ export default async function OpportunityDetailPage({
 
               {progress?.status === "saved" ? (
                 <>
-                  <span style={savedBadgeButtonStyle}>
+                  <span style={savedBadgeStyle}>
                     Saved ✓
                   </span>
 
                   <form action={startOpportunity}>
-                    <input
-                      type="hidden"
-                      name="opportunityId"
-                      value={opportunity.id}
-                    />
-
-                    <input
-                      type="hidden"
-                      name="opportunitySlug"
-                      value={opportunity.slug}
+                    <OpportunityHiddenFields
+                      opportunityId={opportunity.id}
+                      opportunitySlug={opportunity.slug}
                     />
 
                     <button
@@ -568,16 +534,9 @@ export default async function OpportunityDetailPage({
 
               {progress?.status === "in_progress" ? (
                 <form action={pauseOpportunity}>
-                  <input
-                    type="hidden"
-                    name="opportunityId"
-                    value={opportunity.id}
-                  />
-
-                  <input
-                    type="hidden"
-                    name="opportunitySlug"
-                    value={opportunity.slug}
+                  <OpportunityHiddenFields
+                    opportunityId={opportunity.id}
+                    opportunitySlug={opportunity.slug}
                   />
 
                   <button
@@ -591,16 +550,9 @@ export default async function OpportunityDetailPage({
 
               {progress?.status === "paused" ? (
                 <form action={resumeOpportunity}>
-                  <input
-                    type="hidden"
-                    name="opportunityId"
-                    value={opportunity.id}
-                  />
-
-                  <input
-                    type="hidden"
-                    name="opportunitySlug"
-                    value={opportunity.slug}
+                  <OpportunityHiddenFields
+                    opportunityId={opportunity.id}
+                    opportunitySlug={opportunity.slug}
                   />
 
                   <button
@@ -621,17 +573,7 @@ export default async function OpportunityDetailPage({
           </div>
 
           <div className="card" style={{ padding: 30 }}>
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
-              Execution Plan
-            </p>
+            <p style={blueEyebrowStyle}>Execution Plan</p>
 
             <h2
               style={{
@@ -718,16 +660,9 @@ export default async function OpportunityDetailPage({
                           action={completeOpportunityStep}
                           style={{ marginTop: 14 }}
                         >
-                          <input
-                            type="hidden"
-                            name="opportunityId"
-                            value={opportunity.id}
-                          />
-
-                          <input
-                            type="hidden"
-                            name="opportunitySlug"
-                            value={opportunity.slug}
+                          <OpportunityHiddenFields
+                            opportunityId={opportunity.id}
+                            opportunitySlug={opportunity.slug}
                           />
 
                           <input
@@ -765,15 +700,7 @@ export default async function OpportunityDetailPage({
           </div>
 
           <div className="card" style={{ padding: 30 }}>
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={blueEyebrowStyle}>
               Recommended AI Stack
             </p>
 
@@ -792,20 +719,12 @@ export default async function OpportunityDetailPage({
                   ({ stack, reason }) => (
                     <div
                       key={stack.id}
-                      style={{
-                        padding: 20,
-                        borderRadius: 16,
-                        border:
-                          "1px solid rgba(96,165,250,0.2)",
-                        background:
-                          "rgba(37,99,235,0.06)",
-                      }}
+                      style={resourceCardStyle}
                     >
                       <div
                         style={{
                           display: "flex",
-                          justifyContent:
-                            "space-between",
+                          justifyContent: "space-between",
                           alignItems: "flex-start",
                           gap: 16,
                           flexWrap: "wrap",
@@ -821,15 +740,8 @@ export default async function OpportunityDetailPage({
                             {stack.name}
                           </h3>
 
-                          <p
-                            style={{
-                              margin: "8px 0 0",
-                              color: "var(--muted)",
-                              lineHeight: 1.65,
-                            }}
-                          >
-                            {reason ||
-                              stack.description}
+                          <p style={resourceTextStyle}>
+                            {reason || stack.description}
                           </p>
                         </div>
 
@@ -852,15 +764,7 @@ export default async function OpportunityDetailPage({
           </div>
 
           <div className="card" style={{ padding: 30 }}>
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={blueEyebrowStyle}>
               Recommended Tools
             </p>
 
@@ -886,25 +790,9 @@ export default async function OpportunityDetailPage({
                   ({ tool, reason }, index) => (
                     <div
                       key={tool.id}
-                      style={{
-                        padding: 20,
-                        borderRadius: 16,
-                        border:
-                          "1px solid rgba(255,255,255,0.09)",
-                        background:
-                          "rgba(255,255,255,0.035)",
-                      }}
+                      style={resourceCardStyle}
                     >
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "#60a5fa",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          textTransform:
-                            "uppercase",
-                        }}
-                      >
+                      <p style={blueEyebrowStyle}>
                         Tool {index + 1}
                       </p>
 
@@ -917,14 +805,7 @@ export default async function OpportunityDetailPage({
                         {tool.name}
                       </h3>
 
-                      <p
-                        style={{
-                          margin: "8px 0 0",
-                          color: "var(--muted)",
-                          lineHeight: 1.6,
-                          fontSize: 14,
-                        }}
-                      >
+                      <p style={resourceTextStyle}>
                         {reason || tool.tagline}
                       </p>
 
@@ -936,29 +817,19 @@ export default async function OpportunityDetailPage({
                           marginTop: 14,
                         }}
                       >
-                        <span
-                          style={smallMetricStyle}
-                        >
+                        <span style={smallMetricStyle}>
                           {tool.pricing_model ??
                             "Pricing varies"}
                         </span>
 
-                        <span
-                          style={smallMetricStyle}
-                        >
+                        <span style={smallMetricStyle}>
                           ★ {tool.rating ?? "New"}
                         </span>
                       </div>
 
                       <Link
                         href={`/tools/${tool.slug}`}
-                        style={{
-                          display: "inline-flex",
-                          marginTop: 16,
-                          color: "#93c5fd",
-                          textDecoration: "none",
-                          fontWeight: 700,
-                        }}
+                        style={resourceLinkStyle}
                       >
                         View Tool →
                       </Link>
@@ -969,6 +840,174 @@ export default async function OpportunityDetailPage({
             ) : (
               <p style={{ color: "var(--muted)" }}>
                 No recommended tools have been assigned yet.
+              </p>
+            )}
+          </div>
+
+          <div
+            className="card"
+            style={{
+              padding: 30,
+              border: "1px solid rgba(34,197,94,0.24)",
+              background: "rgba(34,197,94,0.035)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#86efac",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+              }}
+            >
+              Proof of Value
+            </p>
+
+            <h2
+              style={{
+                margin: "8px 0 10px",
+                fontSize: 30,
+              }}
+            >
+              What happened when you applied this?
+            </h2>
+
+            <p
+              style={{
+                margin: "0 0 22px",
+                color: "var(--muted)",
+                lineHeight: 1.7,
+                maxWidth: 820,
+              }}
+            >
+              Record a real outcome so AITFM can help you track
+              the value you are getting from your work over
+              time.
+            </p>
+
+            <RecordOutcomeForm
+              sourceType="opportunity"
+              sourceId={opportunity.id}
+              sourceSlug={opportunity.slug}
+            />
+          </div>
+
+          <div className="card" style={{ padding: 30 }}>
+            <p style={blueEyebrowStyle}>
+              Your Recorded Outcomes
+            </p>
+
+            <h2
+              style={{
+                margin: "8px 0 20px",
+                fontSize: 30,
+              }}
+            >
+              Results from this opportunity.
+            </h2>
+
+            {outcomes && outcomes.length > 0 ? (
+              <div style={{ display: "grid", gap: 14 }}>
+                {outcomes.map((outcome) => (
+                  <div
+                    key={outcome.id}
+                    style={resourceCardStyle}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 16,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#86efac",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {formatOutcomeType(
+                            outcome.outcome_type
+                          )}
+                        </p>
+
+                        <h3
+                          style={{
+                            margin: "7px 0 0",
+                            fontSize: 21,
+                          }}
+                        >
+                          {outcome.summary}
+                        </h3>
+                      </div>
+
+                      {outcome.numeric_value !== null ? (
+                        <div
+                          style={{
+                            textAlign: "right",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#bbf7d0",
+                              fontSize: 24,
+                              fontWeight: 900,
+                            }}
+                          >
+                            {formatOutcomeValue(
+                              outcome.outcome_type,
+                              outcome.numeric_value,
+                              outcome.unit
+                            )}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {outcome.notes ? (
+                      <p
+                        style={{
+                          margin: "10px 0 0",
+                          color: "var(--muted)",
+                          lineHeight: 1.65,
+                        }}
+                      >
+                        {outcome.notes}
+                      </p>
+                    ) : null}
+
+                    <p
+                      style={{
+                        margin: "12px 0 0",
+                        color: "rgba(255,255,255,0.45)",
+                        fontSize: 12,
+                      }}
+                    >
+                      Recorded{" "}
+                      {new Date(
+                        outcome.created_at
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p
+                style={{
+                  margin: 0,
+                  color: "var(--muted)",
+                  lineHeight: 1.7,
+                }}
+              >
+                No outcomes recorded yet. When you get a real
+                result, record it above.
               </p>
             )}
           </div>
@@ -999,7 +1038,7 @@ export default async function OpportunityDetailPage({
                 fontSize: 30,
               }}
             >
-              Move from research to execution.
+              Keep building measurable value.
             </h2>
 
             <p
@@ -1010,10 +1049,9 @@ export default async function OpportunityDetailPage({
                 maxWidth: 800,
               }}
             >
-              Review the execution plan, open the
-              recommended AI Stack, and evaluate the
-              individual tools before investing time or
-              money into implementation.
+              Continue the execution plan, use the recommended
+              tools and AI Stack, and record actual outcomes as
+              you test and improve the workflow.
             </p>
 
             <div
@@ -1029,7 +1067,7 @@ export default async function OpportunityDetailPage({
                   href={`/stacks/${recommendedStacks[0].stack.slug}`}
                   className="btn btn-primary"
                 >
-                  Start Recommended Workflow
+                  Open Recommended Workflow
                 </Link>
               ) : null}
 
@@ -1044,6 +1082,67 @@ export default async function OpportunityDetailPage({
         </div>
       )}
     </section>
+  );
+}
+
+function OpportunityHiddenFields({
+  opportunityId,
+  opportunitySlug,
+}: {
+  opportunityId: string;
+  opportunitySlug: string;
+}) {
+  return (
+    <>
+      <input
+        type="hidden"
+        name="opportunityId"
+        value={opportunityId}
+      />
+
+      <input
+        type="hidden"
+        name="opportunitySlug"
+        value={opportunitySlug}
+      />
+    </>
+  );
+}
+
+function ProgressBar({
+  percent,
+}: {
+  percent: number;
+}) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div
+        style={{
+          height: 10,
+          borderRadius: 999,
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.08)",
+        }}
+      >
+        <div
+          style={{
+            width: `${percent}%`,
+            height: "100%",
+            background: "#2563eb",
+          }}
+        />
+      </div>
+
+      <p
+        style={{
+          margin: "8px 0 0",
+          color: "var(--muted)",
+          fontSize: 13,
+        }}
+      >
+        {percent}% complete
+      </p>
+    </div>
   );
 }
 
@@ -1099,15 +1198,7 @@ function InfoSection({
 }) {
   return (
     <div className="card" style={{ padding: 30 }}>
-      <p
-        style={{
-          margin: 0,
-          color: "#60a5fa",
-          fontSize: 12,
-          fontWeight: 800,
-          textTransform: "uppercase",
-        }}
-      >
+      <p style={blueEyebrowStyle}>
         {eyebrow}
       </p>
 
@@ -1133,6 +1224,47 @@ function InfoSection({
     </div>
   );
 }
+
+function formatOutcomeType(type: string) {
+  switch (type) {
+    case "money_earned":
+      return "Money Earned";
+    case "time_saved":
+      return "Time Saved";
+    case "leads_generated":
+      return "Leads Generated";
+    case "tasks_automated":
+      return "Tasks Automated";
+    case "skill_gained":
+      return "Skill Gained";
+    default:
+      return "Other Result";
+  }
+}
+
+function formatOutcomeValue(
+  type: string,
+  value: number,
+  unit: string | null
+) {
+  if (type === "money_earned") {
+    return `$${Number(value).toLocaleString()}`;
+  }
+
+  if (unit) {
+    return `${value} ${unit}`;
+  }
+
+  return String(value);
+}
+
+const blueEyebrowStyle = {
+  margin: 0,
+  color: "#60a5fa",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
 
 const blueBadgeStyle = {
   padding: "7px 11px",
@@ -1191,7 +1323,7 @@ const secondaryButtonStyle = {
   cursor: "pointer",
 };
 
-const savedBadgeButtonStyle = {
+const savedBadgeStyle = {
   display: "inline-flex",
   alignItems: "center",
   padding: "10px 16px",
@@ -1230,6 +1362,28 @@ const secondaryLinkStyle = {
   borderRadius: 12,
   border: "1px solid rgba(255,255,255,0.16)",
   color: "#ffffff",
+  textDecoration: "none",
+  fontWeight: 700,
+};
+
+const resourceCardStyle = {
+  padding: 20,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.09)",
+  background: "rgba(255,255,255,0.035)",
+};
+
+const resourceTextStyle = {
+  margin: "8px 0 0",
+  color: "var(--muted)",
+  lineHeight: 1.65,
+  fontSize: 14,
+};
+
+const resourceLinkStyle = {
+  display: "inline-flex",
+  marginTop: 16,
+  color: "#93c5fd",
   textDecoration: "none",
   fontWeight: 700,
 };
