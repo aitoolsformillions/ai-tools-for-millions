@@ -35,6 +35,19 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const { data: outcomeSummary } = await supabase
+    .from("member_outcome_summary")
+    .select(`
+      total_outcomes,
+      total_money_earned,
+      total_time_saved,
+      total_leads_generated,
+      total_tasks_automated,
+      skills_gained
+    `)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const displayName =
     profile?.display_name ||
     user.user_metadata?.display_name ||
@@ -281,6 +294,30 @@ export default async function DashboardPage() {
     ),
   });
 
+  const totalMoneyEarned = Number(
+    outcomeSummary?.total_money_earned ?? 0
+  );
+
+  const totalTimeSaved = Number(
+    outcomeSummary?.total_time_saved ?? 0
+  );
+
+  const totalLeadsGenerated = Number(
+    outcomeSummary?.total_leads_generated ?? 0
+  );
+
+  const totalTasksAutomated = Number(
+    outcomeSummary?.total_tasks_automated ?? 0
+  );
+
+  const skillsGained = Number(
+    outcomeSummary?.skills_gained ?? 0
+  );
+
+  const totalOutcomes = Number(
+    outcomeSummary?.total_outcomes ?? 0
+  );
+
   return (
     <main
       className="container"
@@ -345,7 +382,7 @@ export default async function DashboardPage() {
           }}
         >
           Learn AI, discover opportunities, build workflows,
-          and continue where you left off.
+          and track the results you create along the way.
         </p>
       </section>
 
@@ -382,6 +419,116 @@ export default async function DashboardPage() {
           label="Membership"
           value={isPro ? "Pro" : "Free"}
         />
+      </section>
+
+      <section
+        className="card"
+        style={{
+          padding: "clamp(24px, 5vw, 38px)",
+          marginBottom: 28,
+          border: "1px solid rgba(34,197,94,0.24)",
+          background: "rgba(34,197,94,0.035)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 20,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <p
+              style={{
+                margin: 0,
+                color: "#86efac",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Your AITFM Results
+            </p>
+
+            <h2
+              style={{
+                margin: "8px 0 8px",
+                fontSize: "clamp(28px, 5vw, 40px)",
+              }}
+            >
+              See the value you are creating with AI.
+            </h2>
+
+            <p
+              style={{
+                margin: 0,
+                color: "var(--muted)",
+                lineHeight: 1.7,
+                maxWidth: 760,
+              }}
+            >
+              These totals come from the outcomes you record
+              while applying AITFM opportunities and workflows.
+            </p>
+          </div>
+
+          <span style={resultsBadgeStyle}>
+            {totalOutcomes} recorded{" "}
+            {totalOutcomes === 1 ? "outcome" : "outcomes"}
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(170px, 1fr))",
+            gap: 14,
+            marginTop: 24,
+          }}
+        >
+          <ResultCard
+            label="Money Earned"
+            value={`$${totalMoneyEarned.toLocaleString()}`}
+          />
+
+          <ResultCard
+            label="Time Saved"
+            value={`${formatNumber(totalTimeSaved)} hrs`}
+          />
+
+          <ResultCard
+            label="Leads Generated"
+            value={formatNumber(totalLeadsGenerated)}
+          />
+
+          <ResultCard
+            label="Tasks Automated"
+            value={formatNumber(totalTasksAutomated)}
+          />
+
+          <ResultCard
+            label="Skills Gained"
+            value={formatNumber(skillsGained)}
+          />
+        </div>
+
+        {totalOutcomes === 0 ? (
+          <p
+            style={{
+              margin: "18px 0 0",
+              color: "var(--muted)",
+              lineHeight: 1.65,
+            }}
+          >
+            No outcomes recorded yet. Start an opportunity,
+            apply the workflow, and record a real result when
+            you have one.
+          </p>
+        ) : null}
       </section>
 
       {continueItem ? (
@@ -796,9 +943,9 @@ export default async function DashboardPage() {
               maxWidth: 760,
             }}
           >
-            Tell us what you want to accomplish with AI so
-            we can prioritize opportunities, tools, and
-            workflows that better fit you.
+            Tell us what you want to accomplish with AI so we
+            can prioritize opportunities, tools, and workflows
+            that better fit you.
           </p>
 
           <Link
@@ -936,6 +1083,48 @@ function ProgressBar({
         }}
       >
         {footer}
+      </p>
+    </div>
+  );
+}
+
+function ResultCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: 18,
+        borderRadius: 16,
+        border: "1px solid rgba(34,197,94,0.16)",
+        background: "rgba(255,255,255,0.03)",
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          color: "var(--muted)",
+          fontSize: 11,
+          fontWeight: 800,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </p>
+
+      <p
+        style={{
+          margin: "8px 0 0",
+          color: "#bbf7d0",
+          fontSize: 26,
+          fontWeight: 900,
+        }}
+      >
+        {value}
       </p>
     </div>
   );
@@ -1178,6 +1367,14 @@ function formatStatus(status: string) {
   }
 }
 
+function formatNumber(value: number) {
+  return Number.isInteger(value)
+    ? value.toLocaleString()
+    : value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      });
+}
+
 const statusPillStyle = {
   padding: "7px 10px",
   borderRadius: 999,
@@ -1186,4 +1383,14 @@ const statusPillStyle = {
   color: "#dbeafe",
   fontSize: 12,
   fontWeight: 700,
+};
+
+const resultsBadgeStyle = {
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "rgba(34,197,94,0.1)",
+  border: "1px solid rgba(34,197,94,0.22)",
+  color: "#bbf7d0",
+  fontSize: 12,
+  fontWeight: 800,
 };
