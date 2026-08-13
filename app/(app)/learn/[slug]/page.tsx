@@ -56,7 +56,50 @@ export default async function LearningPathPage({
       modules,
       is_pro,
       is_featured,
-      status
+      status,
+
+      learning_path_tools (
+        position,
+        reason,
+        ai_tools (
+          id,
+          name,
+          slug,
+          tagline,
+          pricing_model,
+          rating
+        )
+      ),
+
+      learning_path_stacks (
+        position,
+        reason,
+        ai_stacks (
+          id,
+          name,
+          slug,
+          description,
+          goal,
+          is_premium
+        )
+      ),
+
+      learning_path_opportunities (
+        position,
+        reason,
+        opportunities (
+          id,
+          title,
+          slug,
+          summary,
+          category,
+          difficulty,
+          startup_cost,
+          time_to_launch,
+          opportunity_score,
+          is_pro
+        )
+      )
     `)
     .eq("slug", slug)
     .eq("status", "published")
@@ -103,6 +146,57 @@ export default async function LearningPathPage({
           (completedModules / modules.length) * 100
         )
       : 0;
+
+  const recommendedTools =
+    path.learning_path_tools
+      ?.sort((a, b) => a.position - b.position)
+      .flatMap((item) => {
+        const tools = Array.isArray(item.ai_tools)
+          ? item.ai_tools
+          : item.ai_tools
+            ? [item.ai_tools]
+            : [];
+
+        return tools.map((tool) => ({
+          position: item.position,
+          reason: item.reason,
+          tool,
+        }));
+      }) ?? [];
+
+  const recommendedStacks =
+    path.learning_path_stacks
+      ?.sort((a, b) => a.position - b.position)
+      .flatMap((item) => {
+        const stacks = Array.isArray(item.ai_stacks)
+          ? item.ai_stacks
+          : item.ai_stacks
+            ? [item.ai_stacks]
+            : [];
+
+        return stacks.map((stack) => ({
+          position: item.position,
+          reason: item.reason,
+          stack,
+        }));
+      }) ?? [];
+
+  const recommendedOpportunities =
+    path.learning_path_opportunities
+      ?.sort((a, b) => a.position - b.position)
+      .flatMap((item) => {
+        const opportunities = Array.isArray(item.opportunities)
+          ? item.opportunities
+          : item.opportunities
+            ? [item.opportunities]
+            : [];
+
+        return opportunities.map((opportunity) => ({
+          position: item.position,
+          reason: item.reason,
+          opportunity,
+        }));
+      }) ?? [];
 
   return (
     <section>
@@ -239,9 +333,9 @@ export default async function LearningPathPage({
               lineHeight: 1.7,
             }}
           >
-            Pro members get the complete learning sequence
-            plus future exercises, connected tools, workflows,
-            and implementation resources.
+            Pro members get the complete learning sequence,
+            connected tools, recommended AI Stacks,
+            implementation opportunities, and future exercises.
           </p>
 
           <Link href="/upgrade" className="btn btn-primary">
@@ -552,7 +646,167 @@ export default async function LearningPathPage({
             className="card"
             style={{
               padding: 30,
-              border: "1px solid rgba(34,197,94,0.18)",
+              border: "1px solid rgba(167,139,250,0.24)",
+              background: "rgba(139,92,246,0.04)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#c4b5fd",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+              }}
+            >
+              Learn → Use
+            </p>
+
+            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+              Practice with the right AI tools.
+            </h2>
+
+            {recommendedTools.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: 14,
+                }}
+              >
+                {recommendedTools.map(
+                  ({ tool, reason }, index) => (
+                    <div
+                      key={tool.id}
+                      style={resourceCardStyle}
+                    >
+                      <p style={resourceEyebrowStyle}>
+                        Tool {index + 1}
+                      </p>
+
+                      <h3 style={resourceTitleStyle}>
+                        {tool.name}
+                      </h3>
+
+                      <p style={resourceTextStyle}>
+                        {reason || tool.tagline}
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          marginTop: 14,
+                        }}
+                      >
+                        <span style={metricPillStyle}>
+                          {tool.pricing_model ??
+                            "Pricing varies"}
+                        </span>
+
+                        <span style={metricPillStyle}>
+                          ★ {tool.rating ?? "New"}
+                        </span>
+                      </div>
+
+                      <Link
+                        href={`/tools/${tool.slug}`}
+                        style={resourceLinkStyle}
+                      >
+                        View Tool →
+                      </Link>
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <p style={{ color: "var(--muted)" }}>
+                No tools have been connected to this path yet.
+              </p>
+            )}
+          </div>
+
+          <div
+            className="card"
+            style={{
+              padding: 30,
+              border: "1px solid rgba(96,165,250,0.22)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#60a5fa",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+              }}
+            >
+              Learn → Build
+            </p>
+
+            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+              Put the tools together into a workflow.
+            </h2>
+
+            {recommendedStacks.length > 0 ? (
+              <div style={{ display: "grid", gap: 14 }}>
+                {recommendedStacks.map(
+                  ({ stack, reason }) => (
+                    <div
+                      key={stack.id}
+                      style={resourceCardStyle}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          gap: 16,
+                          alignItems: "flex-start",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ maxWidth: 720 }}>
+                          <p style={resourceEyebrowStyle}>
+                            Recommended AI Stack
+                          </p>
+
+                          <h3 style={resourceTitleStyle}>
+                            {stack.name}
+                          </h3>
+
+                          <p style={resourceTextStyle}>
+                            {reason ||
+                              stack.description}
+                          </p>
+                        </div>
+
+                        <Link
+                          href={`/stacks/${stack.slug}`}
+                          className="btn btn-primary"
+                        >
+                          Open Workflow →
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <p style={{ color: "var(--muted)" }}>
+                No AI Stack has been connected to this path yet.
+              </p>
+            )}
+          </div>
+
+          <div
+            className="card"
+            style={{
+              padding: 30,
+              border: "1px solid rgba(34,197,94,0.22)",
               background: "rgba(34,197,94,0.035)",
             }}
           >
@@ -568,21 +822,149 @@ export default async function LearningPathPage({
               Learn → Apply
             </p>
 
+            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+              Apply the skill to a real opportunity.
+            </h2>
+
+            {recommendedOpportunities.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: 14,
+                }}
+              >
+                {recommendedOpportunities.map(
+                  ({ opportunity, reason }) => {
+                    const opportunityLocked =
+                      opportunity.is_pro && !isPro;
+
+                    return (
+                      <div
+                        key={opportunity.id}
+                        style={resourceCardStyle}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            marginBottom: 12,
+                          }}
+                        >
+                          <span style={metricPillStyle}>
+                            {opportunity.category}
+                          </span>
+
+                          <span style={metricPillStyle}>
+                            {opportunity.difficulty}
+                          </span>
+
+                          <span style={metricPillStyle}>
+                            Score{" "}
+                            {opportunity.opportunity_score ??
+                              "—"}
+                            /10
+                          </span>
+                        </div>
+
+                        <h3 style={resourceTitleStyle}>
+                          {opportunity.title}
+                        </h3>
+
+                        <p style={resourceTextStyle}>
+                          {reason ||
+                            opportunity.summary}
+                        </p>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            marginTop: 14,
+                          }}
+                        >
+                          <span style={metricPillStyle}>
+                            {opportunity.startup_cost ??
+                              "Cost varies"}
+                          </span>
+
+                          <span style={metricPillStyle}>
+                            {opportunity.time_to_launch ??
+                              "Time varies"}
+                          </span>
+                        </div>
+
+                        {opportunityLocked ? (
+                          <Link
+                            href="/upgrade"
+                            className="btn btn-primary"
+                            style={{
+                              display: "inline-flex",
+                              marginTop: 16,
+                            }}
+                          >
+                            Unlock Opportunity
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/opportunities/${opportunity.slug}`}
+                            style={resourceLinkStyle}
+                          >
+                            Apply What You Learned →
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            ) : (
+              <p style={{ color: "var(--muted)" }}>
+                No opportunities have been connected to this
+                path yet.
+              </p>
+            )}
+          </div>
+
+          <div
+            className="card"
+            style={{
+              padding: 30,
+              border: "1px solid rgba(34,197,94,0.18)",
+              background: "rgba(34,197,94,0.025)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#86efac",
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: "uppercase",
+              }}
+            >
+              Your Next Move
+            </p>
+
             <h2 style={{ margin: "8px 0 8px", fontSize: 30 }}>
-              Put what you learn into practice.
+              Turn knowledge into useful action.
             </h2>
 
             <p
               style={{
                 margin: 0,
-                maxWidth: 800,
+                maxWidth: 820,
                 color: "var(--muted)",
                 lineHeight: 1.7,
               }}
             >
-              Continue into AITFM Opportunities and AI Stacks
-              to turn learning into practical workflows and
-              implementation.
+              Use the connected tools to practice, open the
+              recommended AI Stack to understand how the tools
+              work together, and then apply the skill through a
+              relevant opportunity.
             </p>
 
             <div
@@ -593,15 +975,20 @@ export default async function LearningPathPage({
                 marginTop: 18,
               }}
             >
+              {recommendedStacks[0] ? (
+                <Link
+                  href={`/stacks/${recommendedStacks[0].stack.slug}`}
+                  className="btn btn-primary"
+                >
+                  Open Recommended Stack
+                </Link>
+              ) : null}
+
               <Link
                 href="/opportunities"
-                className="btn btn-primary"
+                style={secondaryLinkStyle}
               >
-                Explore Opportunities
-              </Link>
-
-              <Link href="/stacks" style={secondaryLinkStyle}>
-                Explore AI Stacks
+                Explore All Opportunities
               </Link>
             </div>
           </div>
@@ -742,6 +1129,41 @@ const secondaryLinkStyle = {
   borderRadius: 12,
   border: "1px solid rgba(255,255,255,0.16)",
   color: "#ffffff",
+  textDecoration: "none",
+  fontWeight: 700,
+};
+
+const resourceCardStyle = {
+  padding: 20,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.09)",
+  background: "rgba(255,255,255,0.035)",
+};
+
+const resourceEyebrowStyle = {
+  margin: 0,
+  color: "#60a5fa",
+  fontSize: 11,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
+
+const resourceTitleStyle = {
+  margin: "7px 0 0",
+  fontSize: 22,
+};
+
+const resourceTextStyle = {
+  margin: "8px 0 0",
+  color: "var(--muted)",
+  lineHeight: 1.65,
+  fontSize: 14,
+};
+
+const resourceLinkStyle = {
+  display: "inline-flex",
+  marginTop: 16,
+  color: "#93c5fd",
   textDecoration: "none",
   fontWeight: 700,
 };
