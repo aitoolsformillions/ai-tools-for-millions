@@ -15,8 +15,15 @@ export async function startLearningPath(formData: FormData) {
     redirect("/login");
   }
 
-  const learningPathId = getText(formData, "learningPathId");
-  const learningPathSlug = getText(formData, "learningPathSlug");
+  const learningPathId = getText(
+    formData,
+    "learningPathId"
+  );
+
+  const learningPathSlug = getText(
+    formData,
+    "learningPathSlug"
+  );
 
   if (!learningPathId) {
     return;
@@ -24,12 +31,13 @@ export async function startLearningPath(formData: FormData) {
 
   const now = new Date().toISOString();
 
-  const { data: existing, error: existingError } = await supabase
-    .from("member_learning_progress")
-    .select("started_at, current_module")
-    .eq("user_id", user.id)
-    .eq("learning_path_id", learningPathId)
-    .maybeSingle();
+  const { data: existing, error: existingError } =
+    await supabase
+      .from("member_learning_progress")
+      .select("started_at, current_module")
+      .eq("user_id", user.id)
+      .eq("learning_path_id", learningPathId)
+      .maybeSingle();
 
   if (existingError) {
     console.error(
@@ -46,13 +54,16 @@ export async function startLearningPath(formData: FormData) {
         user_id: user.id,
         learning_path_id: learningPathId,
         status: "in_progress",
-        current_module: existing?.current_module ?? 0,
-        started_at: existing?.started_at ?? now,
+        current_module:
+          existing?.current_module ?? 0,
+        started_at:
+          existing?.started_at ?? now,
         completed_at: null,
         last_opened_at: now,
       },
       {
-        onConflict: "user_id,learning_path_id",
+        onConflict:
+          "user_id,learning_path_id",
         ignoreDuplicates: false,
       }
     );
@@ -65,7 +76,17 @@ export async function startLearningPath(formData: FormData) {
     return;
   }
 
-  revalidateLearningPaths(learningPathSlug);
+  await recordLearningBehaviorEvent({
+    supabase,
+    userId: user.id,
+    learningPathId,
+    eventType: "started",
+    context: "learning_progress_action",
+  });
+
+  revalidateLearningPaths(
+    learningPathSlug
+  );
 }
 
 export async function completeLearningModule(
@@ -81,7 +102,11 @@ export async function completeLearningModule(
     redirect("/login");
   }
 
-  const learningPathId = getText(formData, "learningPathId");
+  const learningPathId = getText(
+    formData,
+    "learningPathId"
+  );
+
   const learningPathSlug = getText(
     formData,
     "learningPathSlug"
@@ -102,7 +127,9 @@ export async function completeLearningModule(
   const { data: progress, error: progressError } =
     await supabase
       .from("member_learning_progress")
-      .select("current_module, status, started_at")
+      .select(
+        "current_module, status, started_at"
+      )
       .eq("user_id", user.id)
       .eq("learning_path_id", learningPathId)
       .maybeSingle();
@@ -115,13 +142,21 @@ export async function completeLearningModule(
     return;
   }
 
-  if (!progress || progress.status !== "in_progress") {
+  if (
+    !progress ||
+    progress.status !== "in_progress"
+  ) {
     return;
   }
 
-  const currentModule = progress.current_module ?? 0;
+  const currentModule =
+    progress.current_module ?? 0;
+
   const nextModule = currentModule + 1;
-  const isComplete = nextModule >= totalModules;
+
+  const isComplete =
+    nextModule >= totalModules;
+
   const now = new Date().toISOString();
 
   const { error } = await supabase
@@ -130,9 +165,14 @@ export async function completeLearningModule(
       current_module: isComplete
         ? totalModules
         : nextModule,
-      status: isComplete ? "completed" : "in_progress",
-      started_at: progress.started_at ?? now,
-      completed_at: isComplete ? now : null,
+      status: isComplete
+        ? "completed"
+        : "in_progress",
+      started_at:
+        progress.started_at ?? now,
+      completed_at: isComplete
+        ? now
+        : null,
       last_opened_at: now,
     })
     .eq("user_id", user.id)
@@ -146,7 +186,20 @@ export async function completeLearningModule(
     return;
   }
 
-  revalidateLearningPaths(learningPathSlug);
+  if (isComplete) {
+    await recordLearningBehaviorEvent({
+      supabase,
+      userId: user.id,
+      learningPathId,
+      eventType: "completed",
+      context:
+        "learning_progress_action",
+    });
+  }
+
+  revalidateLearningPaths(
+    learningPathSlug
+  );
 }
 
 export async function pauseLearningPath(
@@ -162,7 +215,11 @@ export async function pauseLearningPath(
     redirect("/login");
   }
 
-  const learningPathId = getText(formData, "learningPathId");
+  const learningPathId = getText(
+    formData,
+    "learningPathId"
+  );
+
   const learningPathSlug = getText(
     formData,
     "learningPathSlug"
@@ -176,10 +233,14 @@ export async function pauseLearningPath(
     .from("member_learning_progress")
     .update({
       status: "paused",
-      last_opened_at: new Date().toISOString(),
+      last_opened_at:
+        new Date().toISOString(),
     })
     .eq("user_id", user.id)
-    .eq("learning_path_id", learningPathId)
+    .eq(
+      "learning_path_id",
+      learningPathId
+    )
     .eq("status", "in_progress");
 
   if (error) {
@@ -190,7 +251,9 @@ export async function pauseLearningPath(
     return;
   }
 
-  revalidateLearningPaths(learningPathSlug);
+  revalidateLearningPaths(
+    learningPathSlug
+  );
 }
 
 export async function resumeLearningPath(
@@ -206,7 +269,11 @@ export async function resumeLearningPath(
     redirect("/login");
   }
 
-  const learningPathId = getText(formData, "learningPathId");
+  const learningPathId = getText(
+    formData,
+    "learningPathId"
+  );
+
   const learningPathSlug = getText(
     formData,
     "learningPathSlug"
@@ -220,10 +287,14 @@ export async function resumeLearningPath(
     .from("member_learning_progress")
     .update({
       status: "in_progress",
-      last_opened_at: new Date().toISOString(),
+      last_opened_at:
+        new Date().toISOString(),
     })
     .eq("user_id", user.id)
-    .eq("learning_path_id", learningPathId)
+    .eq(
+      "learning_path_id",
+      learningPathId
+    )
     .eq("status", "paused");
 
   if (error) {
@@ -234,14 +305,60 @@ export async function resumeLearningPath(
     return;
   }
 
-  revalidateLearningPaths(learningPathSlug);
+  revalidateLearningPaths(
+    learningPathSlug
+  );
 }
 
-function getText(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
+async function recordLearningBehaviorEvent({
+  supabase,
+  userId,
+  learningPathId,
+  eventType,
+  context,
+}: {
+  supabase: Awaited<
+    ReturnType<typeof createClient>
+  >;
+  userId: string;
+  learningPathId: string;
+  eventType:
+    | "started"
+    | "completed";
+  context: string;
+}) {
+  const { error } = await supabase
+    .from("recommendation_events")
+    .insert({
+      user_id: userId,
+      recommendation_type:
+        "learning_path",
+      recommendation_id:
+        learningPathId,
+      event_type: eventType,
+      context,
+    });
+
+  if (error) {
+    console.error(
+      `Record learning ${eventType} behavior error:`,
+      error.message
+    );
+  }
 }
 
-function revalidateLearningPaths(slug: string) {
+function getText(
+  formData: FormData,
+  key: string
+) {
+  return String(
+    formData.get(key) ?? ""
+  ).trim();
+}
+
+function revalidateLearningPaths(
+  slug: string
+) {
   revalidatePath("/learn");
   revalidatePath("/dashboard");
 

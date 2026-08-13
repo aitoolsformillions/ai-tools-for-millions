@@ -15,8 +15,15 @@ export async function saveOpportunity(formData: FormData) {
     redirect("/login");
   }
 
-  const opportunityId = getText(formData, "opportunityId");
-  const opportunitySlug = getText(formData, "opportunitySlug");
+  const opportunityId = getText(
+    formData,
+    "opportunityId"
+  );
+
+  const opportunitySlug = getText(
+    formData,
+    "opportunitySlug"
+  );
 
   if (!opportunityId) {
     return;
@@ -38,14 +45,27 @@ export async function saveOpportunity(formData: FormData) {
     );
 
   if (error) {
-    console.error("Save opportunity error:", error.message);
+    console.error(
+      "Save opportunity error:",
+      error.message
+    );
     return;
   }
+
+  await recordBehaviorEvent({
+    supabase,
+    userId: user.id,
+    opportunityId,
+    eventType: "saved",
+    context: "opportunity_progress_action",
+  });
 
   revalidateOpportunityPaths(opportunitySlug);
 }
 
-export async function startOpportunity(formData: FormData) {
+export async function startOpportunity(
+  formData: FormData
+) {
   const supabase = await createClient();
 
   const {
@@ -56,8 +76,15 @@ export async function startOpportunity(formData: FormData) {
     redirect("/login");
   }
 
-  const opportunityId = getText(formData, "opportunityId");
-  const opportunitySlug = getText(formData, "opportunitySlug");
+  const opportunityId = getText(
+    formData,
+    "opportunityId"
+  );
+
+  const opportunitySlug = getText(
+    formData,
+    "opportunitySlug"
+  );
 
   if (!opportunityId) {
     return;
@@ -65,12 +92,13 @@ export async function startOpportunity(formData: FormData) {
 
   const now = new Date().toISOString();
 
-  const { data: existing, error: existingError } = await supabase
-    .from("opportunity_progress")
-    .select("started_at, current_step")
-    .eq("user_id", user.id)
-    .eq("opportunity_id", opportunityId)
-    .maybeSingle();
+  const { data: existing, error: existingError } =
+    await supabase
+      .from("opportunity_progress")
+      .select("started_at, current_step")
+      .eq("user_id", user.id)
+      .eq("opportunity_id", opportunityId)
+      .maybeSingle();
 
   if (existingError) {
     console.error(
@@ -99,9 +127,20 @@ export async function startOpportunity(formData: FormData) {
     );
 
   if (error) {
-    console.error("Start opportunity error:", error.message);
+    console.error(
+      "Start opportunity error:",
+      error.message
+    );
     return;
   }
+
+  await recordBehaviorEvent({
+    supabase,
+    userId: user.id,
+    opportunityId,
+    eventType: "started",
+    context: "opportunity_progress_action",
+  });
 
   revalidateOpportunityPaths(opportunitySlug);
 }
@@ -119,7 +158,11 @@ export async function completeOpportunityStep(
     redirect("/login");
   }
 
-  const opportunityId = getText(formData, "opportunityId");
+  const opportunityId = getText(
+    formData,
+    "opportunityId"
+  );
+
   const opportunitySlug = getText(
     formData,
     "opportunitySlug"
@@ -140,7 +183,9 @@ export async function completeOpportunityStep(
   const { data: progress, error: progressError } =
     await supabase
       .from("opportunity_progress")
-      .select("current_step, status, started_at")
+      .select(
+        "current_step, status, started_at"
+      )
       .eq("user_id", user.id)
       .eq("opportunity_id", opportunityId)
       .maybeSingle();
@@ -153,23 +198,37 @@ export async function completeOpportunityStep(
     return;
   }
 
-  if (!progress || progress.status !== "in_progress") {
+  if (
+    !progress ||
+    progress.status !== "in_progress"
+  ) {
     return;
   }
 
-  const currentStep = progress.current_step ?? 0;
+  const currentStep =
+    progress.current_step ?? 0;
+
   const nextStep = currentStep + 1;
+
   const now = new Date().toISOString();
 
-  const isComplete = nextStep >= totalSteps;
+  const isComplete =
+    nextStep >= totalSteps;
 
   const { error } = await supabase
     .from("opportunity_progress")
     .update({
-      current_step: isComplete ? totalSteps : nextStep,
-      status: isComplete ? "completed" : "in_progress",
-      completed_at: isComplete ? now : null,
-      started_at: progress.started_at ?? now,
+      current_step: isComplete
+        ? totalSteps
+        : nextStep,
+      status: isComplete
+        ? "completed"
+        : "in_progress",
+      completed_at: isComplete
+        ? now
+        : null,
+      started_at:
+        progress.started_at ?? now,
       last_opened_at: now,
     })
     .eq("user_id", user.id)
@@ -183,10 +242,23 @@ export async function completeOpportunityStep(
     return;
   }
 
+  if (isComplete) {
+    await recordBehaviorEvent({
+      supabase,
+      userId: user.id,
+      opportunityId,
+      eventType: "completed",
+      context:
+        "opportunity_progress_action",
+    });
+  }
+
   revalidateOpportunityPaths(opportunitySlug);
 }
 
-export async function pauseOpportunity(formData: FormData) {
+export async function pauseOpportunity(
+  formData: FormData
+) {
   const supabase = await createClient();
 
   const {
@@ -197,7 +269,11 @@ export async function pauseOpportunity(formData: FormData) {
     redirect("/login");
   }
 
-  const opportunityId = getText(formData, "opportunityId");
+  const opportunityId = getText(
+    formData,
+    "opportunityId"
+  );
+
   const opportunitySlug = getText(
     formData,
     "opportunitySlug"
@@ -211,21 +287,32 @@ export async function pauseOpportunity(formData: FormData) {
     .from("opportunity_progress")
     .update({
       status: "paused",
-      last_opened_at: new Date().toISOString(),
+      last_opened_at:
+        new Date().toISOString(),
     })
     .eq("user_id", user.id)
-    .eq("opportunity_id", opportunityId)
+    .eq(
+      "opportunity_id",
+      opportunityId
+    )
     .eq("status", "in_progress");
 
   if (error) {
-    console.error("Pause opportunity error:", error.message);
+    console.error(
+      "Pause opportunity error:",
+      error.message
+    );
     return;
   }
 
-  revalidateOpportunityPaths(opportunitySlug);
+  revalidateOpportunityPaths(
+    opportunitySlug
+  );
 }
 
-export async function resumeOpportunity(formData: FormData) {
+export async function resumeOpportunity(
+  formData: FormData
+) {
   const supabase = await createClient();
 
   const {
@@ -236,7 +323,11 @@ export async function resumeOpportunity(formData: FormData) {
     redirect("/login");
   }
 
-  const opportunityId = getText(formData, "opportunityId");
+  const opportunityId = getText(
+    formData,
+    "opportunityId"
+  );
+
   const opportunitySlug = getText(
     formData,
     "opportunitySlug"
@@ -250,22 +341,74 @@ export async function resumeOpportunity(formData: FormData) {
     .from("opportunity_progress")
     .update({
       status: "in_progress",
-      last_opened_at: new Date().toISOString(),
+      last_opened_at:
+        new Date().toISOString(),
     })
     .eq("user_id", user.id)
-    .eq("opportunity_id", opportunityId)
+    .eq(
+      "opportunity_id",
+      opportunityId
+    )
     .eq("status", "paused");
 
   if (error) {
-    console.error("Resume opportunity error:", error.message);
+    console.error(
+      "Resume opportunity error:",
+      error.message
+    );
     return;
   }
 
-  revalidateOpportunityPaths(opportunitySlug);
+  revalidateOpportunityPaths(
+    opportunitySlug
+  );
 }
 
-function getText(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
+async function recordBehaviorEvent({
+  supabase,
+  userId,
+  opportunityId,
+  eventType,
+  context,
+}: {
+  supabase: Awaited<
+    ReturnType<typeof createClient>
+  >;
+  userId: string;
+  opportunityId: string;
+  eventType:
+    | "saved"
+    | "started"
+    | "completed";
+  context: string;
+}) {
+  const { error } = await supabase
+    .from("recommendation_events")
+    .insert({
+      user_id: userId,
+      recommendation_type:
+        "opportunity",
+      recommendation_id:
+        opportunityId,
+      event_type: eventType,
+      context,
+    });
+
+  if (error) {
+    console.error(
+      `Record ${eventType} behavior error:`,
+      error.message
+    );
+  }
+}
+
+function getText(
+  formData: FormData,
+  key: string
+) {
+  return String(
+    formData.get(key) ?? ""
+  ).trim();
 }
 
 function revalidateOpportunityPaths(
@@ -275,6 +418,8 @@ function revalidateOpportunityPaths(
   revalidatePath("/dashboard");
 
   if (opportunitySlug) {
-    revalidatePath(`/opportunities/${opportunitySlug}`);
+    revalidatePath(
+      `/opportunities/${opportunitySlug}`
+    );
   }
 }
