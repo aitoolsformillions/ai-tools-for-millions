@@ -52,19 +52,20 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const { data: recommendationEvents, error: recommendationEventsError } =
-    await supabase
-      .from("recommendation_events")
-      .select(`
-        recommendation_type,
-        recommendation_id,
-        event_type,
-        context,
-        created_at
-      `)
-      .eq("user_id", user.id)
-      .eq("recommendation_type", "opportunity")
-      .order("created_at", { ascending: false });
+  const {
+    data: recommendationEvents,
+    error: recommendationEventsError,
+  } = await supabase
+    .from("recommendation_events")
+    .select(`
+      recommendation_type,
+      recommendation_id,
+      event_type,
+      context,
+      created_at
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
   if (recommendationEventsError) {
     console.error(
@@ -79,270 +80,8 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ||
     "there";
 
-  const isPro = profile?.membership_tier === "pro";
-
-  const { data: progressRows, error: progressError } =
-    await supabase
-      .from("opportunity_progress")
-      .select(`
-        id,
-        status,
-        current_step,
-        started_at,
-        completed_at,
-        last_opened_at,
-        opportunities (
-          id,
-          title,
-          slug,
-          summary,
-          category,
-          opportunity_score,
-          execution_steps,
-          is_pro
-        )
-      `)
-      .eq("user_id", user.id)
-      .order("last_opened_at", { ascending: false });
-
-  if (progressError) {
-    console.error(
-      "Dashboard opportunity progress error:",
-      progressError.message
-    );
-  }
-
-  const progressItems =
-    progressRows
-      ?.flatMap((row) => {
-        const opportunities = Array.isArray(row.opportunities)
-          ? row.opportunities
-          : row.opportunities
-            ? [row.opportunities]
-            : [];
-
-        return opportunities.map((opportunity) => {
-          const executionSteps = Array.isArray(
-            opportunity.execution_steps
-          )
-            ? opportunity.execution_steps.filter(
-                (step): step is string =>
-                  typeof step === "string"
-              )
-            : [];
-
-          const totalSteps = executionSteps.length;
-
-          const completedSteps =
-            row.status === "completed"
-              ? totalSteps
-              : Math.min(row.current_step ?? 0, totalSteps);
-
-          const progressPercent =
-            totalSteps > 0
-              ? Math.round(
-                  (completedSteps / totalSteps) * 100
-                )
-              : 0;
-
-          return {
-            id: row.id,
-            status: row.status,
-            currentStep: row.current_step ?? 0,
-            startedAt: row.started_at,
-            completedAt: row.completed_at,
-            lastOpenedAt: row.last_opened_at,
-            opportunity,
-            totalSteps,
-            completedSteps,
-            progressPercent,
-          };
-        });
-      }) ?? [];
-
-  const activeItems = progressItems.filter(
-    (item) =>
-      item.status === "in_progress" ||
-      item.status === "paused"
-  );
-
-  const savedItems = progressItems.filter(
-    (item) => item.status === "saved"
-  );
-
-  const completedItems = progressItems.filter(
-    (item) => item.status === "completed"
-  );
-
-  const continueItem = activeItems[0] ?? null;
-
-  const { data: learningProgressRows, error: learningProgressError } =
-    await supabase
-      .from("member_learning_progress")
-      .select(`
-        id,
-        status,
-        current_module,
-        started_at,
-        completed_at,
-        last_opened_at,
-        learning_paths (
-          id,
-          title,
-          slug,
-          description,
-          experience_level,
-          estimated_time,
-          modules,
-          is_pro,
-          is_featured
-        )
-      `)
-      .eq("user_id", user.id)
-      .order("last_opened_at", { ascending: false });
-
-  if (learningProgressError) {
-    console.error(
-      "Dashboard learning progress error:",
-      learningProgressError.message
-    );
-  }
-
-  const learningItems =
-    learningProgressRows
-      ?.flatMap((row) => {
-        const paths = Array.isArray(row.learning_paths)
-          ? row.learning_paths
-          : row.learning_paths
-            ? [row.learning_paths]
-            : [];
-
-        return paths.map((path) => {
-          const modules = Array.isArray(path.modules)
-            ? path.modules
-            : [];
-
-          const totalModules = modules.length;
-
-          const completedModules =
-            row.status === "completed"
-              ? totalModules
-              : Math.min(
-                  row.current_module ?? 0,
-                  totalModules
-                );
-
-          const progressPercent =
-            totalModules > 0
-              ? Math.round(
-                  (completedModules / totalModules) * 100
-                )
-              : 0;
-
-          return {
-            id: row.id,
-            status: row.status,
-            currentModule: row.current_module ?? 0,
-            startedAt: row.started_at,
-            completedAt: row.completed_at,
-            lastOpenedAt: row.last_opened_at,
-            path,
-            totalModules,
-            completedModules,
-            progressPercent,
-          };
-        });
-      }) ?? [];
-
-  const activeLearningItems = learningItems.filter(
-    (item) =>
-      item.status === "in_progress" ||
-      item.status === "paused"
-  );
-
-  const completedLearningItems = learningItems.filter(
-    (item) => item.status === "completed"
-  );
-
-  const continueLearningItem =
-    activeLearningItems[0] ?? null;
-
-  const preferredCategory = mapGoalToCategory(
-    preferences?.primary_goal
-  );
-
-  const dismissedOpportunityIds = new Set(
-    (recommendationEvents ?? [])
-      .filter(
-        (event) => event.event_type === "dismissed"
-      )
-      .map((event) => event.recommendation_id)
-  );
-
-  const openedOpportunityCounts = new Map<string, number>();
-
-  for (const event of recommendationEvents ?? []) {
-    if (event.event_type !== "opened") {
-      continue;
-    }
-
-    openedOpportunityCounts.set(
-      event.recommendation_id,
-      (openedOpportunityCounts.get(
-        event.recommendation_id
-      ) ?? 0) + 1
-    );
-  }
-
-  const { data: recommendationCandidates, error: recommendationError } =
-    await supabase
-      .from("opportunities")
-      .select(`
-        id,
-        title,
-        slug,
-        summary,
-        category,
-        difficulty,
-        startup_cost,
-        time_to_launch,
-        opportunity_score,
-        is_pro,
-        is_featured,
-        target_customer
-      `)
-      .eq("status", "published")
-      .order("opportunity_score", { ascending: false });
-
-  if (recommendationError) {
-    console.error(
-      "Dashboard recommendation error:",
-      recommendationError.message
-    );
-  }
-
-  const recommendedOpportunity = pickRecommendedOpportunity({
-    opportunities: recommendationCandidates ?? [],
-    preferredCategory,
-    experienceLevel:
-      preferences?.experience_level ?? "Beginner",
-    businessInterest:
-      preferences?.business_interest ?? "Other",
-    monthlyBudget:
-      preferences?.monthly_budget ?? "$0-$100",
-    completedIds: new Set(
-      completedItems.map(
-        (item) => item.opportunity.id
-      )
-    ),
-    activeIds: new Set(
-      activeItems.map(
-        (item) => item.opportunity.id
-      )
-    ),
-    dismissedIds: dismissedOpportunityIds,
-    openedCounts: openedOpportunityCounts,
-  });
+  const isPro =
+    profile?.membership_tier === "pro";
 
   const totalMoneyEarned = Number(
     outcomeSummary?.total_money_earned ?? 0
@@ -368,16 +107,432 @@ export default async function DashboardPage() {
     outcomeSummary?.total_outcomes ?? 0
   );
 
+  const {
+    data: progressRows,
+    error: progressError,
+  } = await supabase
+    .from("opportunity_progress")
+    .select(`
+      id,
+      status,
+      current_step,
+      started_at,
+      completed_at,
+      last_opened_at,
+      opportunities (
+        id,
+        title,
+        slug,
+        summary,
+        category,
+        opportunity_score,
+        execution_steps,
+        is_pro
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("last_opened_at", {
+      ascending: false,
+    });
+
+  if (progressError) {
+    console.error(
+      "Dashboard opportunity progress error:",
+      progressError.message
+    );
+  }
+
+  const progressItems =
+    progressRows
+      ?.flatMap((row) => {
+        const opportunities = Array.isArray(
+          row.opportunities
+        )
+          ? row.opportunities
+          : row.opportunities
+            ? [row.opportunities]
+            : [];
+
+        return opportunities.map(
+          (opportunity) => {
+            const executionSteps =
+              Array.isArray(
+                opportunity.execution_steps
+              )
+                ? opportunity.execution_steps.filter(
+                    (
+                      step
+                    ): step is string =>
+                      typeof step === "string"
+                  )
+                : [];
+
+            const totalSteps =
+              executionSteps.length;
+
+            const completedSteps =
+              row.status === "completed"
+                ? totalSteps
+                : Math.min(
+                    row.current_step ?? 0,
+                    totalSteps
+                  );
+
+            const progressPercent =
+              totalSteps > 0
+                ? Math.round(
+                    (completedSteps /
+                      totalSteps) *
+                      100
+                  )
+                : 0;
+
+            return {
+              id: row.id,
+              status: row.status,
+              currentStep:
+                row.current_step ?? 0,
+              startedAt: row.started_at,
+              completedAt:
+                row.completed_at,
+              lastOpenedAt:
+                row.last_opened_at,
+              opportunity,
+              totalSteps,
+              completedSteps,
+              progressPercent,
+            };
+          }
+        );
+      }) ?? [];
+
+  const activeItems =
+    progressItems.filter(
+      (item) =>
+        item.status === "in_progress" ||
+        item.status === "paused"
+    );
+
+  const savedItems =
+    progressItems.filter(
+      (item) => item.status === "saved"
+    );
+
+  const completedItems =
+    progressItems.filter(
+      (item) =>
+        item.status === "completed"
+    );
+
+  const continueItem =
+    activeItems[0] ?? null;
+
+  const {
+    data: learningProgressRows,
+    error: learningProgressError,
+  } = await supabase
+    .from("member_learning_progress")
+    .select(`
+      id,
+      status,
+      current_module,
+      started_at,
+      completed_at,
+      last_opened_at,
+      learning_paths (
+        id,
+        title,
+        slug,
+        description,
+        experience_level,
+        estimated_time,
+        modules,
+        is_pro,
+        is_featured
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("last_opened_at", {
+      ascending: false,
+    });
+
+  if (learningProgressError) {
+    console.error(
+      "Dashboard learning progress error:",
+      learningProgressError.message
+    );
+  }
+
+  const learningItems =
+    learningProgressRows
+      ?.flatMap((row) => {
+        const paths = Array.isArray(
+          row.learning_paths
+        )
+          ? row.learning_paths
+          : row.learning_paths
+            ? [row.learning_paths]
+            : [];
+
+        return paths.map((path) => {
+          const modules = Array.isArray(
+            path.modules
+          )
+            ? path.modules
+            : [];
+
+          const totalModules =
+            modules.length;
+
+          const completedModules =
+            row.status === "completed"
+              ? totalModules
+              : Math.min(
+                  row.current_module ?? 0,
+                  totalModules
+                );
+
+          const progressPercent =
+            totalModules > 0
+              ? Math.round(
+                  (completedModules /
+                    totalModules) *
+                    100
+                )
+              : 0;
+
+          return {
+            id: row.id,
+            status: row.status,
+            currentModule:
+              row.current_module ?? 0,
+            startedAt: row.started_at,
+            completedAt:
+              row.completed_at,
+            lastOpenedAt:
+              row.last_opened_at,
+            path,
+            totalModules,
+            completedModules,
+            progressPercent,
+          };
+        });
+      }) ?? [];
+
+  const activeLearningItems =
+    learningItems.filter(
+      (item) =>
+        item.status === "in_progress" ||
+        item.status === "paused"
+    );
+
+  const completedLearningItems =
+    learningItems.filter(
+      (item) =>
+        item.status === "completed"
+    );
+
+  const continueLearningItem =
+    activeLearningItems[0] ?? null;
+
+  const opportunityEvents =
+    (recommendationEvents ?? []).filter(
+      (event) =>
+        event.recommendation_type ===
+        "opportunity"
+    );
+
+  const learningEvents =
+    (recommendationEvents ?? []).filter(
+      (event) =>
+        event.recommendation_type ===
+        "learning_path"
+    );
+
+  const dismissedOpportunityIds =
+    new Set(
+      opportunityEvents
+        .filter(
+          (event) =>
+            event.event_type ===
+            "dismissed"
+        )
+        .map(
+          (event) =>
+            event.recommendation_id
+        )
+    );
+
+  const openedOpportunityCounts =
+    new Map<string, number>();
+
+  const startedOpportunityIds =
+    new Set<string>();
+
+  const completedOpportunityBehaviorIds =
+    new Set<string>();
+
+  for (const event of opportunityEvents) {
+    if (event.event_type === "opened") {
+      openedOpportunityCounts.set(
+        event.recommendation_id,
+        (openedOpportunityCounts.get(
+          event.recommendation_id
+        ) ?? 0) + 1
+      );
+    }
+
+    if (event.event_type === "started") {
+      startedOpportunityIds.add(
+        event.recommendation_id
+      );
+    }
+
+    if (
+      event.event_type === "completed"
+    ) {
+      completedOpportunityBehaviorIds.add(
+        event.recommendation_id
+      );
+    }
+  }
+
+  const learningStarts =
+    learningEvents.filter(
+      (event) =>
+        event.event_type === "started"
+    ).length;
+
+  const learningCompletions =
+    learningEvents.filter(
+      (event) =>
+        event.event_type === "completed"
+    ).length;
+
+  const highestCompletedLearningLevel =
+    getHighestCompletedLearningLevel(
+      completedLearningItems.map(
+        (item) =>
+          item.path.experience_level
+      )
+    );
+
+  const preferredCategory =
+    mapGoalToCategory(
+      preferences?.primary_goal
+    );
+
+  const {
+    data: recommendationCandidates,
+    error: recommendationError,
+  } = await supabase
+    .from("opportunities")
+    .select(`
+      id,
+      title,
+      slug,
+      summary,
+      category,
+      difficulty,
+      startup_cost,
+      time_to_launch,
+      opportunity_score,
+      is_pro,
+      is_featured,
+      target_customer
+    `)
+    .eq("status", "published")
+    .order("opportunity_score", {
+      ascending: false,
+    });
+
+  if (recommendationError) {
+    console.error(
+      "Dashboard recommendation error:",
+      recommendationError.message
+    );
+  }
+
+  const recommendedOpportunity =
+    pickRecommendedOpportunity({
+      opportunities:
+        recommendationCandidates ?? [],
+
+      preferredCategory,
+
+      experienceLevel:
+        preferences?.experience_level ??
+        "Beginner",
+
+      businessInterest:
+        preferences?.business_interest ??
+        "Other",
+
+      monthlyBudget:
+        preferences?.monthly_budget ??
+        "$0-$100",
+
+      completedIds: new Set(
+        completedItems.map(
+          (item) =>
+            item.opportunity.id
+        )
+      ),
+
+      activeIds: new Set(
+        activeItems.map(
+          (item) =>
+            item.opportunity.id
+        )
+      ),
+
+      dismissedIds:
+        dismissedOpportunityIds,
+
+      openedCounts:
+        openedOpportunityCounts,
+
+      startedBehaviorIds:
+        startedOpportunityIds,
+
+      completedBehaviorIds:
+        completedOpportunityBehaviorIds,
+
+      totalMoneyEarned,
+      totalTimeSaved,
+      totalLeadsGenerated,
+      totalTasksAutomated,
+      skillsGained,
+      learningStarts,
+      learningCompletions,
+      highestCompletedLearningLevel,
+    });
+
+  const adaptiveReason =
+    buildAdaptiveReason({
+      primaryGoal:
+        preferences?.primary_goal,
+      totalMoneyEarned,
+      totalTimeSaved,
+      totalLeadsGenerated,
+      totalTasksAutomated,
+      learningCompletions,
+      highestCompletedLearningLevel,
+    });
+
   return (
     <main
       className="container"
-      style={{ padding: "56px 0 90px" }}
+      style={{
+        padding: "56px 0 90px",
+      }}
     >
       <form
         action={signOut}
         style={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent:
+            "flex-end",
           marginBottom: 24,
         }}
       >
@@ -386,8 +541,10 @@ export default async function DashboardPage() {
           style={{
             padding: "10px 18px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.25)",
-            background: "rgba(255,255,255,0.08)",
+            border:
+              "1px solid rgba(255,255,255,0.25)",
+            background:
+              "rgba(255,255,255,0.08)",
             color: "white",
             cursor: "pointer",
             fontWeight: 600,
@@ -397,7 +554,11 @@ export default async function DashboardPage() {
         </button>
       </form>
 
-      <section style={{ marginBottom: 34 }}>
+      <section
+        style={{
+          marginBottom: 34,
+        }}
+      >
         <p
           style={{
             margin: 0,
@@ -414,7 +575,8 @@ export default async function DashboardPage() {
         <h1
           style={{
             margin: "10px 0 0",
-            fontSize: "clamp(40px, 7vw, 66px)",
+            fontSize:
+              "clamp(40px, 7vw, 66px)",
             letterSpacing: "-.05em",
             lineHeight: 1.05,
           }}
@@ -428,11 +590,13 @@ export default async function DashboardPage() {
             color: "var(--muted)",
             fontSize: 18,
             lineHeight: 1.7,
-            maxWidth: 760,
+            maxWidth: 780,
           }}
         >
-          Learn AI, discover opportunities, build workflows,
-          and track the results you create along the way.
+          Learn AI, build useful systems,
+          measure your results, and let
+          AITFM improve what it recommends
+          as you use the platform.
         </p>
       </section>
 
@@ -440,7 +604,7 @@ export default async function DashboardPage() {
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(180px, 1fr))",
+            "repeat(auto-fit, minmax(175px, 1fr))",
           gap: 14,
           marginBottom: 28,
         }}
@@ -451,8 +615,15 @@ export default async function DashboardPage() {
         />
 
         <StatCard
+          label="Saved for Later"
+          value={savedItems.length}
+        />
+
+        <StatCard
           label="Active Learning"
-          value={activeLearningItems.length}
+          value={
+            activeLearningItems.length
+          }
         />
 
         <StatCard
@@ -461,29 +632,30 @@ export default async function DashboardPage() {
         />
 
         <StatCard
-          label="Completed Learning"
-          value={completedLearningItems.length}
-        />
-
-        <StatCard
           label="Membership"
-          value={isPro ? "Pro" : "Free"}
+          value={
+            isPro ? "Pro" : "Free"
+          }
         />
       </section>
 
       <section
         className="card"
         style={{
-          padding: "clamp(24px, 5vw, 38px)",
+          padding:
+            "clamp(24px, 5vw, 38px)",
           marginBottom: 28,
-          border: "1px solid rgba(34,197,94,0.24)",
-          background: "rgba(34,197,94,0.035)",
+          border:
+            "1px solid rgba(34,197,94,0.24)",
+          background:
+            "rgba(34,197,94,0.035)",
         }}
       >
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent:
+              "space-between",
             alignItems: "flex-start",
             gap: 20,
             flexWrap: "wrap",
@@ -496,8 +668,10 @@ export default async function DashboardPage() {
                 color: "#86efac",
                 fontSize: 12,
                 fontWeight: 800,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
+                textTransform:
+                  "uppercase",
+                letterSpacing:
+                  "0.08em",
               }}
             >
               Your AITFM Results
@@ -506,10 +680,12 @@ export default async function DashboardPage() {
             <h2
               style={{
                 margin: "8px 0 8px",
-                fontSize: "clamp(28px, 5vw, 40px)",
+                fontSize:
+                  "clamp(28px, 5vw, 40px)",
               }}
             >
-              See the value you are creating with AI.
+              Your AI value is becoming
+              measurable.
             </h2>
 
             <p
@@ -520,14 +696,20 @@ export default async function DashboardPage() {
                 maxWidth: 760,
               }}
             >
-              These totals come from the outcomes you record
-              while applying AITFM opportunities and workflows.
+              These totals come from the
+              real outcomes you record
+              while applying AITFM
+              workflows and opportunities.
             </p>
           </div>
 
-          <span style={resultsBadgeStyle}>
+          <span
+            style={resultsBadgeStyle}
+          >
             {totalOutcomes} recorded{" "}
-            {totalOutcomes === 1 ? "outcome" : "outcomes"}
+            {totalOutcomes === 1
+              ? "outcome"
+              : "outcomes"}
           </span>
         </div>
 
@@ -542,27 +724,37 @@ export default async function DashboardPage() {
         >
           <ResultCard
             label="Money Earned"
-            value={`$${totalMoneyEarned.toLocaleString()}`}
+            value={`$${formatNumber(
+              totalMoneyEarned
+            )}`}
           />
 
           <ResultCard
             label="Time Saved"
-            value={`${formatNumber(totalTimeSaved)} hrs`}
+            value={`${formatNumber(
+              totalTimeSaved
+            )} hrs`}
           />
 
           <ResultCard
             label="Leads Generated"
-            value={formatNumber(totalLeadsGenerated)}
+            value={formatNumber(
+              totalLeadsGenerated
+            )}
           />
 
           <ResultCard
             label="Tasks Automated"
-            value={formatNumber(totalTasksAutomated)}
+            value={formatNumber(
+              totalTasksAutomated
+            )}
           />
 
           <ResultCard
             label="Skills Gained"
-            value={formatNumber(skillsGained)}
+            value={formatNumber(
+              skillsGained
+            )}
           />
         </div>
       </section>
@@ -571,10 +763,12 @@ export default async function DashboardPage() {
         <section
           className="card"
           style={{
-            padding: "clamp(24px, 5vw, 38px)",
+            padding:
+              "clamp(24px, 5vw, 38px)",
             marginBottom: 28,
             border:
-              continueItem.status === "paused"
+              continueItem.status ===
+              "paused"
                 ? "1px solid rgba(251,191,36,0.28)"
                 : "1px solid rgba(96,165,250,0.3)",
           }}
@@ -582,24 +776,32 @@ export default async function DashboardPage() {
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent:
+                "space-between",
               gap: 22,
               alignItems: "flex-start",
               flexWrap: "wrap",
             }}
           >
-            <div style={{ maxWidth: 760 }}>
+            <div
+              style={{
+                maxWidth: 760,
+              }}
+            >
               <p
                 style={{
                   margin: 0,
                   color:
-                    continueItem.status === "paused"
+                    continueItem.status ===
+                    "paused"
                       ? "#fde68a"
                       : "#60a5fa",
                   fontSize: 12,
                   fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
+                  textTransform:
+                    "uppercase",
+                  letterSpacing:
+                    "0.08em",
                 }}
               >
                 Continue Building
@@ -608,10 +810,14 @@ export default async function DashboardPage() {
               <h2
                 style={{
                   margin: "8px 0 0",
-                  fontSize: "clamp(28px, 5vw, 40px)",
+                  fontSize:
+                    "clamp(28px, 5vw, 40px)",
                 }}
               >
-                {continueItem.opportunity.title}
+                {
+                  continueItem
+                    .opportunity.title
+                }
               </h2>
 
               <p
@@ -621,7 +827,10 @@ export default async function DashboardPage() {
                   lineHeight: 1.7,
                 }}
               >
-                {continueItem.opportunity.summary}
+                {
+                  continueItem
+                    .opportunity.summary
+                }
               </p>
             </div>
 
@@ -629,7 +838,8 @@ export default async function DashboardPage() {
               href={`/opportunities/${continueItem.opportunity.slug}`}
               className="btn btn-primary"
             >
-              {continueItem.status === "paused"
+              {continueItem.status ===
+              "paused"
                 ? "Resume Opportunity →"
                 : "Continue Opportunity →"}
             </Link>
@@ -637,11 +847,14 @@ export default async function DashboardPage() {
 
           <ProgressBar
             label={
-              continueItem.status === "paused"
+              continueItem.status ===
+              "paused"
                 ? "Paused"
                 : "Progress"
             }
-            percent={continueItem.progressPercent}
+            percent={
+              continueItem.progressPercent
+            }
             footer={`${continueItem.completedSteps} of ${continueItem.totalSteps} execution steps completed`}
           />
         </section>
@@ -651,36 +864,47 @@ export default async function DashboardPage() {
         <section
           className="card"
           style={{
-            padding: "clamp(24px, 5vw, 38px)",
+            padding:
+              "clamp(24px, 5vw, 38px)",
             marginBottom: 28,
             border:
-              continueLearningItem.status === "paused"
+              continueLearningItem.status ===
+              "paused"
                 ? "1px solid rgba(251,191,36,0.28)"
                 : "1px solid rgba(167,139,250,0.3)",
-            background: "rgba(139,92,246,0.04)",
+            background:
+              "rgba(139,92,246,0.04)",
           }}
         >
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent:
+                "space-between",
               gap: 22,
               alignItems: "flex-start",
               flexWrap: "wrap",
             }}
           >
-            <div style={{ maxWidth: 760 }}>
+            <div
+              style={{
+                maxWidth: 760,
+              }}
+            >
               <p
                 style={{
                   margin: 0,
                   color:
-                    continueLearningItem.status === "paused"
+                    continueLearningItem.status ===
+                    "paused"
                       ? "#fde68a"
                       : "#c4b5fd",
                   fontSize: 12,
                   fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
+                  textTransform:
+                    "uppercase",
+                  letterSpacing:
+                    "0.08em",
                 }}
               >
                 Continue Learning
@@ -689,10 +913,14 @@ export default async function DashboardPage() {
               <h2
                 style={{
                   margin: "8px 0 0",
-                  fontSize: "clamp(28px, 5vw, 40px)",
+                  fontSize:
+                    "clamp(28px, 5vw, 40px)",
                 }}
               >
-                {continueLearningItem.path.title}
+                {
+                  continueLearningItem
+                    .path.title
+                }
               </h2>
 
               <p
@@ -702,7 +930,10 @@ export default async function DashboardPage() {
                   lineHeight: 1.7,
                 }}
               >
-                {continueLearningItem.path.description}
+                {
+                  continueLearningItem
+                    .path.description
+                }
               </p>
             </div>
 
@@ -710,7 +941,8 @@ export default async function DashboardPage() {
               href={`/learn/${continueLearningItem.path.slug}`}
               className="btn btn-primary"
             >
-              {continueLearningItem.status === "paused"
+              {continueLearningItem.status ===
+              "paused"
                 ? "Resume Learning →"
                 : "Continue Learning →"}
             </Link>
@@ -718,11 +950,14 @@ export default async function DashboardPage() {
 
           <ProgressBar
             label={
-              continueLearningItem.status === "paused"
+              continueLearningItem.status ===
+              "paused"
                 ? "Paused"
                 : "Learning Progress"
             }
-            percent={continueLearningItem.progressPercent}
+            percent={
+              continueLearningItem.progressPercent
+            }
             footer={`${continueLearningItem.completedModules} of ${continueLearningItem.totalModules} modules completed`}
           />
         </section>
@@ -733,10 +968,13 @@ export default async function DashboardPage() {
         <section
           className="card"
           style={{
-            padding: "clamp(24px, 5vw, 38px)",
+            padding:
+              "clamp(24px, 5vw, 38px)",
             marginBottom: 28,
-            border: "1px solid rgba(34,197,94,0.24)",
-            background: "rgba(34,197,94,0.04)",
+            border:
+              "1px solid rgba(34,197,94,0.28)",
+            background:
+              "rgba(34,197,94,0.045)",
           }}
         >
           <p
@@ -745,8 +983,10 @@ export default async function DashboardPage() {
               color: "#86efac",
               fontSize: 12,
               fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
+              textTransform:
+                "uppercase",
+              letterSpacing:
+                "0.08em",
             }}
           >
             Adaptive Recommendation
@@ -755,21 +995,29 @@ export default async function DashboardPage() {
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent:
+                "space-between",
               gap: 22,
               flexWrap: "wrap",
               alignItems: "flex-start",
               marginTop: 8,
             }}
           >
-            <div style={{ maxWidth: 780 }}>
+            <div
+              style={{
+                maxWidth: 780,
+              }}
+            >
               <h2
                 style={{
                   margin: 0,
-                  fontSize: "clamp(28px, 5vw, 40px)",
+                  fontSize:
+                    "clamp(28px, 5vw, 40px)",
                 }}
               >
-                {recommendedOpportunity.title}
+                {
+                  recommendedOpportunity.title
+                }
               </h2>
 
               <p
@@ -779,7 +1027,9 @@ export default async function DashboardPage() {
                   lineHeight: 1.7,
                 }}
               >
-                {recommendedOpportunity.summary}
+                {
+                  recommendedOpportunity.summary
+                }
               </p>
 
               <div
@@ -790,20 +1040,32 @@ export default async function DashboardPage() {
                   marginTop: 16,
                 }}
               >
-                <span style={statusPillStyle}>
-                  {recommendedOpportunity.category}
+                <span
+                  style={statusPillStyle}
+                >
+                  {
+                    recommendedOpportunity.category
+                  }
                 </span>
 
-                <span style={statusPillStyle}>
-                  {recommendedOpportunity.difficulty}
+                <span
+                  style={statusPillStyle}
+                >
+                  {
+                    recommendedOpportunity.difficulty
+                  }
                 </span>
 
-                <span style={statusPillStyle}>
+                <span
+                  style={statusPillStyle}
+                >
                   {recommendedOpportunity.startup_cost ??
                     "Cost varies"}
                 </span>
 
-                <span style={statusPillStyle}>
+                <span
+                  style={statusPillStyle}
+                >
                   Score{" "}
                   {recommendedOpportunity.opportunity_score ??
                     "—"}
@@ -811,18 +1073,42 @@ export default async function DashboardPage() {
                 </span>
               </div>
 
-              <p
+              <div
                 style={{
-                  margin: "16px 0 0",
-                  color: "#bbf7d0",
-                  lineHeight: 1.6,
-                  fontSize: 14,
+                  marginTop: 18,
+                  padding: 16,
+                  borderRadius: 14,
+                  background:
+                    "rgba(34,197,94,0.06)",
+                  border:
+                    "1px solid rgba(34,197,94,0.14)",
                 }}
               >
-                Ranked using your saved preferences, current
-                progress, completed work, and previous
-                recommendation activity.
-              </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#bbf7d0",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform:
+                      "uppercase",
+                  }}
+                >
+                  Why AITFM chose this
+                </p>
+
+                <p
+                  style={{
+                    margin: "7px 0 0",
+                    color:
+                      "rgba(255,255,255,0.78)",
+                    lineHeight: 1.65,
+                    fontSize: 14,
+                  }}
+                >
+                  {adaptiveReason}
+                </p>
+              </div>
             </div>
 
             <div
@@ -832,7 +1118,11 @@ export default async function DashboardPage() {
                 flexWrap: "wrap",
               }}
             >
-              <form action={recordRecommendationEvent}>
+              <form
+                action={
+                  recordRecommendationEvent
+                }
+              >
                 <input
                   type="hidden"
                   name="recommendationType"
@@ -842,7 +1132,9 @@ export default async function DashboardPage() {
                 <input
                   type="hidden"
                   name="recommendationId"
-                  value={recommendedOpportunity.id}
+                  value={
+                    recommendedOpportunity.id
+                  }
                 />
 
                 <input
@@ -854,7 +1146,7 @@ export default async function DashboardPage() {
                 <input
                   type="hidden"
                   name="context"
-                  value="dashboard_adaptive_recommendation"
+                  value="dashboard_adaptive_intelligence"
                 />
 
                 <input
@@ -871,7 +1163,11 @@ export default async function DashboardPage() {
                 </button>
               </form>
 
-              <form action={dismissRecommendation}>
+              <form
+                action={
+                  dismissRecommendation
+                }
+              >
                 <input
                   type="hidden"
                   name="recommendationType"
@@ -881,18 +1177,22 @@ export default async function DashboardPage() {
                 <input
                   type="hidden"
                   name="recommendationId"
-                  value={recommendedOpportunity.id}
+                  value={
+                    recommendedOpportunity.id
+                  }
                 />
 
                 <input
                   type="hidden"
                   name="context"
-                  value="dashboard_adaptive_recommendation"
+                  value="dashboard_adaptive_intelligence"
                 />
 
                 <button
                   type="submit"
-                  style={dismissButtonStyle}
+                  style={
+                    dismissButtonStyle
+                  }
                 >
                   Not Interested
                 </button>
@@ -914,7 +1214,8 @@ export default async function DashboardPage() {
               color: "#60a5fa",
               fontSize: 12,
               fontWeight: 800,
-              textTransform: "uppercase",
+              textTransform:
+                "uppercase",
             }}
           >
             Adaptive Recommendation
@@ -926,7 +1227,8 @@ export default async function DashboardPage() {
               fontSize: 30,
             }}
           >
-            No recommendation is ready right now.
+            Keep using AITFM to improve
+            your recommendations.
           </h2>
 
           <p
@@ -934,10 +1236,14 @@ export default async function DashboardPage() {
               margin: 0,
               color: "var(--muted)",
               lineHeight: 1.7,
+              maxWidth: 760,
             }}
           >
-            Update your preferences or explore more
-            opportunities to give AITFM more signals.
+            Your preferences, learning
+            activity, opportunity progress,
+            dismissals, and recorded
+            outcomes all become signals for
+            future recommendations.
           </p>
 
           <Link
@@ -1010,10 +1316,14 @@ export default async function DashboardPage() {
           }
           description={
             isPro
-              ? "You have access to Pro opportunities, premium learning paths, AI Stacks, and guided implementation resources."
-              : "Upgrade to unlock premium opportunities, learning paths, AI Stacks, and future member intelligence."
+              ? "You have access to Pro opportunities, premium learning paths, AI Stacks, adaptive recommendations, and guided implementation."
+              : "Upgrade to unlock premium opportunities, learning paths, AI Stacks, and deeper member intelligence."
           }
-          href={isPro ? "/settings" : "/upgrade"}
+          href={
+            isPro
+              ? "/settings"
+              : "/upgrade"
+          }
           linkText={
             isPro
               ? "Manage Membership →"
@@ -1023,6 +1333,379 @@ export default async function DashboardPage() {
       </section>
     </main>
   );
+}
+
+function pickRecommendedOpportunity({
+  opportunities,
+  preferredCategory,
+  experienceLevel,
+  businessInterest,
+  monthlyBudget,
+  completedIds,
+  activeIds,
+  dismissedIds,
+  openedCounts,
+  startedBehaviorIds,
+  completedBehaviorIds,
+  totalMoneyEarned,
+  totalTimeSaved,
+  totalLeadsGenerated,
+  totalTasksAutomated,
+  skillsGained,
+  learningStarts,
+  learningCompletions,
+  highestCompletedLearningLevel,
+}: {
+  opportunities: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    summary: string;
+    category: string;
+    difficulty: string;
+    startup_cost: string | null;
+    time_to_launch: string | null;
+    opportunity_score: number | null;
+    is_pro: boolean;
+    is_featured: boolean;
+    target_customer: string;
+  }>;
+  preferredCategory: string | null;
+  experienceLevel: string;
+  businessInterest: string;
+  monthlyBudget: string;
+  completedIds: Set<string>;
+  activeIds: Set<string>;
+  dismissedIds: Set<string>;
+  openedCounts: Map<string, number>;
+  startedBehaviorIds: Set<string>;
+  completedBehaviorIds: Set<string>;
+  totalMoneyEarned: number;
+  totalTimeSaved: number;
+  totalLeadsGenerated: number;
+  totalTasksAutomated: number;
+  skillsGained: number;
+  learningStarts: number;
+  learningCompletions: number;
+  highestCompletedLearningLevel:
+    | "Beginner"
+    | "Intermediate"
+    | "Advanced"
+    | null;
+}) {
+  const ranked = opportunities
+    .filter(
+      (opportunity) =>
+        !completedIds.has(
+          opportunity.id
+        ) &&
+        !activeIds.has(
+          opportunity.id
+        ) &&
+        !dismissedIds.has(
+          opportunity.id
+        ) &&
+        !completedBehaviorIds.has(
+          opportunity.id
+        )
+    )
+    .map((opportunity) => {
+      let score =
+        Number(
+          opportunity.opportunity_score ??
+            0
+        ) * 10;
+
+      if (
+        preferredCategory &&
+        opportunity.category ===
+          preferredCategory
+      ) {
+        score += 30;
+      }
+
+      if (
+        opportunity.difficulty ===
+        experienceLevel
+      ) {
+        score += 14;
+      }
+
+      if (
+        experienceLevel ===
+          "Beginner" &&
+        opportunity.difficulty ===
+          "Intermediate"
+      ) {
+        score -= 6;
+      }
+
+      if (
+        experienceLevel ===
+          "Advanced" &&
+        opportunity.difficulty ===
+          "Beginner"
+      ) {
+        score -= 4;
+      }
+
+      if (
+        businessInterest !==
+          "Other" &&
+        opportunity.target_customer
+          .toLowerCase()
+          .includes(
+            businessInterest.toLowerCase()
+          )
+      ) {
+        score += 18;
+      }
+
+      if (opportunity.is_featured) {
+        score += 6;
+      }
+
+      if (
+        monthlyBudget ===
+          "$0-$100" &&
+        opportunity.startup_cost?.includes(
+          "$0-"
+        )
+      ) {
+        score += 8;
+      }
+
+      const category =
+        opportunity.category.toLowerCase();
+
+      const titleAndSummary =
+        `${opportunity.title} ${opportunity.summary}`.toLowerCase();
+
+      if (
+        totalMoneyEarned > 0 ||
+        totalLeadsGenerated > 0
+      ) {
+        if (
+          category.includes("money") ||
+          titleAndSummary.includes(
+            "lead"
+          ) ||
+          titleAndSummary.includes(
+            "revenue"
+          ) ||
+          titleAndSummary.includes(
+            "customer"
+          )
+        ) {
+          score += 16;
+        }
+      }
+
+      if (
+        totalTimeSaved > 0 ||
+        totalTasksAutomated > 0
+      ) {
+        if (
+          category.includes("time") ||
+          titleAndSummary.includes(
+            "automation"
+          ) ||
+          titleAndSummary.includes(
+            "workflow"
+          ) ||
+          titleAndSummary.includes(
+            "administrative"
+          ) ||
+          titleAndSummary.includes(
+            "follow-up"
+          )
+        ) {
+          score += 18;
+        }
+      }
+
+      if (
+        skillsGained > 0 ||
+        learningCompletions > 0
+      ) {
+        if (
+          opportunity.difficulty ===
+            "Intermediate"
+        ) {
+          score += 8;
+        }
+      }
+
+      if (
+        highestCompletedLearningLevel ===
+          "Intermediate" &&
+        opportunity.difficulty ===
+          "Intermediate"
+      ) {
+        score += 12;
+      }
+
+      if (
+        highestCompletedLearningLevel ===
+          "Advanced" &&
+        opportunity.difficulty ===
+          "Advanced"
+      ) {
+        score += 16;
+      }
+
+      if (
+        learningStarts >= 2 &&
+        opportunity.difficulty ===
+          "Intermediate"
+      ) {
+        score += 5;
+      }
+
+      const previousOpens =
+        openedCounts.get(
+          opportunity.id
+        ) ?? 0;
+
+      if (previousOpens === 1) {
+        score += 2;
+      }
+
+      if (previousOpens >= 2) {
+        score -= Math.min(
+          previousOpens * 4,
+          16
+        );
+      }
+
+      if (
+        startedBehaviorIds.has(
+          opportunity.id
+        )
+      ) {
+        score -= 20;
+      }
+
+      return {
+        ...opportunity,
+        recommendationScore: score,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.recommendationScore -
+        a.recommendationScore
+    );
+
+  return ranked[0] ?? null;
+}
+
+function buildAdaptiveReason({
+  primaryGoal,
+  totalMoneyEarned,
+  totalTimeSaved,
+  totalLeadsGenerated,
+  totalTasksAutomated,
+  learningCompletions,
+  highestCompletedLearningLevel,
+}: {
+  primaryGoal: string | undefined;
+  totalMoneyEarned: number;
+  totalTimeSaved: number;
+  totalLeadsGenerated: number;
+  totalTasksAutomated: number;
+  learningCompletions: number;
+  highestCompletedLearningLevel:
+    | "Beginner"
+    | "Intermediate"
+    | "Advanced"
+    | null;
+}) {
+  const reasons: string[] = [];
+
+  if (primaryGoal) {
+    reasons.push(
+      `your stated goal is ${primaryGoal}`
+    );
+  }
+
+  if (
+    totalTimeSaved > 0 ||
+    totalTasksAutomated > 0
+  ) {
+    reasons.push(
+      "your recorded results show value from efficiency and automation"
+    );
+  }
+
+  if (
+    totalMoneyEarned > 0 ||
+    totalLeadsGenerated > 0
+  ) {
+    reasons.push(
+      "your recorded results show interest in revenue and lead-generation outcomes"
+    );
+  }
+
+  if (
+    learningCompletions > 0 &&
+    highestCompletedLearningLevel
+  ) {
+    reasons.push(
+      `you have completed ${highestCompletedLearningLevel.toLowerCase()} learning content`
+    );
+  }
+
+  if (reasons.length === 0) {
+    return "AITFM is currently using your saved preferences and opportunity fit. As you learn, build, dismiss recommendations, and record outcomes, this ranking will become more personalized.";
+  }
+
+  return `AITFM prioritized this because ${reasons.join(
+    ", "
+  )}.`;
+}
+
+function getHighestCompletedLearningLevel(
+  levels: string[]
+):
+  | "Beginner"
+  | "Intermediate"
+  | "Advanced"
+  | null {
+  if (levels.includes("Advanced")) {
+    return "Advanced";
+  }
+
+  if (
+    levels.includes("Intermediate")
+  ) {
+    return "Intermediate";
+  }
+
+  if (levels.includes("Beginner")) {
+    return "Beginner";
+  }
+
+  return null;
+}
+
+function mapGoalToCategory(
+  goal: string | undefined
+) {
+  switch (goal) {
+    case "Make Money":
+      return "Make Money";
+
+    case "Save Time":
+      return "Save Time";
+
+    case "Find Market Gaps":
+      return "Market Gaps";
+
+    case "Learn AI":
+    default:
+      return null;
+  }
 }
 
 function ProgressBar({
@@ -1035,11 +1718,16 @@ function ProgressBar({
   footer: string;
 }) {
   return (
-    <div style={{ marginTop: 24 }}>
+    <div
+      style={{
+        marginTop: 24,
+      }}
+    >
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           gap: 16,
           marginBottom: 8,
           color: "var(--muted)",
@@ -1047,7 +1735,10 @@ function ProgressBar({
         }}
       >
         <span>{label}</span>
-        <span>{percent}% complete</span>
+
+        <span>
+          {percent}% complete
+        </span>
       </div>
 
       <div
@@ -1055,7 +1746,8 @@ function ProgressBar({
           height: 11,
           borderRadius: 999,
           overflow: "hidden",
-          background: "rgba(255,255,255,0.08)",
+          background:
+            "rgba(255,255,255,0.08)",
         }}
       >
         <div
@@ -1092,8 +1784,10 @@ function ResultCard({
       style={{
         padding: 18,
         borderRadius: 16,
-        border: "1px solid rgba(34,197,94,0.16)",
-        background: "rgba(255,255,255,0.03)",
+        border:
+          "1px solid rgba(34,197,94,0.16)",
+        background:
+          "rgba(255,255,255,0.03)",
       }}
     >
       <p
@@ -1102,7 +1796,8 @@ function ResultCard({
           color: "var(--muted)",
           fontSize: 11,
           fontWeight: 800,
-          textTransform: "uppercase",
+          textTransform:
+            "uppercase",
         }}
       >
         {label}
@@ -1122,138 +1817,6 @@ function ResultCard({
   );
 }
 
-function pickRecommendedOpportunity({
-  opportunities,
-  preferredCategory,
-  experienceLevel,
-  businessInterest,
-  monthlyBudget,
-  completedIds,
-  activeIds,
-  dismissedIds,
-  openedCounts,
-}: {
-  opportunities: Array<{
-    id: string;
-    title: string;
-    slug: string;
-    summary: string;
-    category: string;
-    difficulty: string;
-    startup_cost: string | null;
-    time_to_launch: string | null;
-    opportunity_score: number | null;
-    is_pro: boolean;
-    is_featured: boolean;
-    target_customer: string;
-  }>;
-  preferredCategory: string | null;
-  experienceLevel: string;
-  businessInterest: string;
-  monthlyBudget: string;
-  completedIds: Set<string>;
-  activeIds: Set<string>;
-  dismissedIds: Set<string>;
-  openedCounts: Map<string, number>;
-}) {
-  const ranked = opportunities
-    .filter(
-      (opportunity) =>
-        !completedIds.has(opportunity.id) &&
-        !activeIds.has(opportunity.id) &&
-        !dismissedIds.has(opportunity.id)
-    )
-    .map((opportunity) => {
-      let score =
-        Number(opportunity.opportunity_score ?? 0) * 10;
-
-      if (
-        preferredCategory &&
-        opportunity.category === preferredCategory
-      ) {
-        score += 30;
-      }
-
-      if (
-        opportunity.difficulty === experienceLevel
-      ) {
-        score += 14;
-      }
-
-      if (
-        experienceLevel === "Beginner" &&
-        opportunity.difficulty === "Intermediate"
-      ) {
-        score -= 6;
-      }
-
-      if (
-        experienceLevel === "Advanced" &&
-        opportunity.difficulty === "Beginner"
-      ) {
-        score -= 3;
-      }
-
-      if (
-        businessInterest !== "Other" &&
-        opportunity.target_customer
-          .toLowerCase()
-          .includes(
-            businessInterest.toLowerCase()
-          )
-      ) {
-        score += 18;
-      }
-
-      if (opportunity.is_featured) {
-        score += 6;
-      }
-
-      if (
-        monthlyBudget === "$0-$100" &&
-        opportunity.startup_cost?.includes("$0-")
-      ) {
-        score += 8;
-      }
-
-      const previousOpens =
-        openedCounts.get(opportunity.id) ?? 0;
-
-      score += Math.min(previousOpens * 3, 9);
-
-      return {
-        ...opportunity,
-        recommendationScore: score,
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.recommendationScore -
-        a.recommendationScore
-    );
-
-  return ranked[0] ?? null;
-}
-
-function mapGoalToCategory(
-  goal: string | undefined
-) {
-  switch (goal) {
-    case "Make Money":
-      return "Make Money";
-
-    case "Save Time":
-      return "Save Time";
-
-    case "Find Market Gaps":
-      return "Market Gaps";
-
-    case "Learn AI":
-    default:
-      return null;
-  }
-}
-
 function StatCard({
   label,
   value,
@@ -1262,14 +1825,20 @@ function StatCard({
   value: number | string;
 }) {
   return (
-    <div className="card" style={{ padding: 20 }}>
+    <div
+      className="card"
+      style={{
+        padding: 20,
+      }}
+    >
       <p
         style={{
           margin: 0,
           color: "var(--muted)",
           fontSize: 12,
           fontWeight: 700,
-          textTransform: "uppercase",
+          textTransform:
+            "uppercase",
         }}
       >
         {label}
@@ -1302,14 +1871,20 @@ function DashboardCard({
   linkText: string;
 }) {
   return (
-    <div className="card" style={{ padding: 26 }}>
+    <div
+      className="card"
+      style={{
+        padding: 26,
+      }}
+    >
       <p
         style={{
           margin: 0,
           color: "#60a5fa",
           fontSize: 11,
           fontWeight: 800,
-          textTransform: "uppercase",
+          textTransform:
+            "uppercase",
         }}
       >
         {eyebrow}
@@ -1350,19 +1925,26 @@ function DashboardCard({
   );
 }
 
-function formatNumber(value: number) {
+function formatNumber(
+  value: number
+) {
   return Number.isInteger(value)
     ? value.toLocaleString()
-    : value.toLocaleString(undefined, {
-        maximumFractionDigits: 2,
-      });
+    : value.toLocaleString(
+        undefined,
+        {
+          maximumFractionDigits: 2,
+        }
+      );
 }
 
 const statusPillStyle = {
   padding: "7px 10px",
   borderRadius: 999,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background:
+    "rgba(255,255,255,0.05)",
+  border:
+    "1px solid rgba(255,255,255,0.08)",
   color: "#dbeafe",
   fontSize: 12,
   fontWeight: 700,
@@ -1371,8 +1953,10 @@ const statusPillStyle = {
 const resultsBadgeStyle = {
   padding: "8px 12px",
   borderRadius: 999,
-  background: "rgba(34,197,94,0.1)",
-  border: "1px solid rgba(34,197,94,0.22)",
+  background:
+    "rgba(34,197,94,0.1)",
+  border:
+    "1px solid rgba(34,197,94,0.22)",
   color: "#bbf7d0",
   fontSize: 12,
   fontWeight: 800,
@@ -1381,9 +1965,12 @@ const resultsBadgeStyle = {
 const dismissButtonStyle = {
   padding: "10px 16px",
   borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.04)",
-  color: "rgba(255,255,255,0.72)",
+  border:
+    "1px solid rgba(255,255,255,0.14)",
+  background:
+    "rgba(255,255,255,0.04)",
+  color:
+    "rgba(255,255,255,0.72)",
   fontWeight: 700,
   cursor: "pointer",
 };

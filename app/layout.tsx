@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/header";
-export const metadata: Metadata = {title:"AI Tools for Millions",description:"Discover, compare, and master the best AI tools."};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body><Header/>{children}</body></html>}
+
+export const metadata: Metadata = {
+  title: "AI Tools for Millions",
+  description:
+    "Discover AI tools, learning paths, workflows, and opportunities to make money, improve efficiency, and find underserved market needs.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
