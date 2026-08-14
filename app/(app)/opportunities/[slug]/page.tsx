@@ -181,12 +181,18 @@ export default async function OpportunityDetailPage({
       }) ?? [];
 
   return (
-    <section>
+    <section
+      style={{
+        width: "100%",
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
       <Link
         href="/opportunities"
         style={{
           display: "inline-flex",
-          marginBottom: 24,
+          marginBottom: 20,
           color: "#93c5fd",
           textDecoration: "none",
           fontWeight: 700,
@@ -198,8 +204,8 @@ export default async function OpportunityDetailPage({
       <div
         className="card"
         style={{
-          padding: "clamp(26px, 5vw, 52px)",
-          marginBottom: 24,
+          padding: "clamp(22px, 5vw, 46px)",
+          marginBottom: 20,
           border: opportunity.is_featured
             ? "1px solid rgba(96,165,250,0.42)"
             : undefined,
@@ -210,7 +216,7 @@ export default async function OpportunityDetailPage({
             display: "flex",
             gap: 8,
             flexWrap: "wrap",
-            marginBottom: 18,
+            marginBottom: 16,
           }}
         >
           <span style={blueBadgeStyle}>
@@ -232,20 +238,21 @@ export default async function OpportunityDetailPage({
 
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
             gap: 24,
-            alignItems: "flex-start",
-            flexWrap: "wrap",
+            alignItems: "start",
           }}
         >
-          <div style={{ maxWidth: 850 }}>
+          <div>
             <h1
               style={{
                 margin: 0,
-                fontSize: "clamp(38px, 7vw, 66px)",
+                fontSize: "clamp(34px, 8vw, 64px)",
                 letterSpacing: "-.05em",
-                lineHeight: 1.05,
+                lineHeight: 1.04,
+                overflowWrap: "anywhere",
               }}
             >
               {opportunity.title}
@@ -253,10 +260,10 @@ export default async function OpportunityDetailPage({
 
             <p
               style={{
-                margin: "18px 0 0",
+                margin: "16px 0 0",
                 color: "var(--muted)",
-                fontSize: 19,
-                lineHeight: 1.75,
+                fontSize: "clamp(16px, 3vw, 19px)",
+                lineHeight: 1.7,
               }}
             >
               {opportunity.summary}
@@ -265,8 +272,9 @@ export default async function OpportunityDetailPage({
 
           <div
             style={{
-              minWidth: 150,
-              padding: 20,
+              width: "100%",
+              maxWidth: 180,
+              padding: 18,
               borderRadius: 18,
               border: "1px solid rgba(250,204,21,0.22)",
               background: "rgba(250,204,21,0.06)",
@@ -289,7 +297,7 @@ export default async function OpportunityDetailPage({
               style={{
                 margin: "8px 0 0",
                 color: "#facc15",
-                fontSize: 36,
+                fontSize: 34,
                 fontWeight: 900,
               }}
             >
@@ -312,9 +320,9 @@ export default async function OpportunityDetailPage({
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12,
-            marginTop: 28,
+              "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+            gap: 10,
+            marginTop: 24,
           }}
         >
           <Metric
@@ -340,50 +348,32 @@ export default async function OpportunityDetailPage({
       </div>
 
       {locked ? (
-        <div
-          className="card"
-          style={{
-            padding: 30,
-            border: "1px solid rgba(96,165,250,0.35)",
-            background: "rgba(37,99,235,0.08)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#93c5fd",
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: "uppercase",
-            }}
-          >
+        <div style={standardCardStyle}>
+          <p style={blueEyebrowStyle}>
             Pro Opportunity
           </p>
 
-          <h2 style={{ margin: "8px 0 0", fontSize: 30 }}>
+          <h2 style={sectionHeadingStyle}>
             Unlock the full opportunity analysis.
           </h2>
 
-          <p
-            style={{
-              margin: "12px 0 20px",
-              color: "var(--muted)",
-              lineHeight: 1.7,
-              maxWidth: 760,
-            }}
-          >
+          <p style={sectionTextStyle}>
             Pro members get the market-gap analysis, AI
             advantage, execution plan, recommended AI Stack,
             connected tools, progress tracking, and outcome
             reporting.
           </p>
 
-          <Link href="/upgrade" className="btn btn-primary">
+          <Link
+            href="/upgrade"
+            className="btn btn-primary"
+            style={{ marginTop: 18 }}
+          >
             Unlock with Pro
           </Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 20 }}>
+        <div style={{ display: "grid", gap: 18 }}>
           <InfoSection
             eyebrow="The Problem"
             title="What is going wrong today?"
@@ -414,21 +404,12 @@ export default async function OpportunityDetailPage({
             content={opportunity.ai_advantage}
           />
 
-          <div
-            className="card"
-            style={{
-              padding: 30,
-              border: "1px solid rgba(96,165,250,0.24)",
-            }}
-          >
-            <p style={blueEyebrowStyle}>Your Progress</p>
+          <div style={standardCardStyle}>
+            <p style={blueEyebrowStyle}>
+              Your Progress
+            </p>
 
-            <h2
-              style={{
-                margin: "8px 0 10px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               {progress?.status === "in_progress"
                 ? "You are working on this opportunity."
                 : progress?.status === "completed"
@@ -440,13 +421,7 @@ export default async function OpportunityDetailPage({
                       : "Ready to begin?"}
             </h2>
 
-            <p
-              style={{
-                margin: 0,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-              }}
-            >
+            <p style={sectionTextStyle}>
               {progress?.status === "in_progress"
                 ? `Current progress: Step ${Math.min(
                     completedStepCount + 1,
@@ -470,14 +445,7 @@ export default async function OpportunityDetailPage({
               <ProgressBar percent={progressPercent} />
             ) : null}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginTop: 18,
-              }}
-            >
+            <div style={buttonRowStyle}>
               {!progress ? (
                 <>
                   <form action={saveOpportunity}>
@@ -572,19 +540,16 @@ export default async function OpportunityDetailPage({
             </div>
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
-            <p style={blueEyebrowStyle}>Execution Plan</p>
+          <div style={standardCardStyle}>
+            <p style={blueEyebrowStyle}>
+              Execution Plan
+            </p>
 
-            <h2
-              style={{
-                margin: "8px 0 22px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               Turn the opportunity into action.
             </h2>
 
-            <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {executionSteps.map((step, index) => {
                 const isCompleted =
                   index < completedStepCount;
@@ -602,10 +567,11 @@ export default async function OpportunityDetailPage({
                     key={`${opportunity.id}-${index}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "44px 1fr",
-                      gap: 16,
+                      gridTemplateColumns:
+                        "minmax(38px, 44px) minmax(0, 1fr)",
+                      gap: 14,
                       alignItems: "flex-start",
-                      padding: 18,
+                      padding: 16,
                       borderRadius: 16,
                       border:
                         isCurrent || isPausedCurrent
@@ -622,8 +588,8 @@ export default async function OpportunityDetailPage({
                   >
                     <div
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 40,
+                        height: 40,
                         borderRadius: 999,
                         display: "grid",
                         placeItems: "center",
@@ -642,14 +608,15 @@ export default async function OpportunityDetailPage({
                       {isCompleted ? "✓" : index + 1}
                     </div>
 
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <p
                         style={{
                           margin: 0,
                           color: isCompleted
                             ? "rgba(255,255,255,0.62)"
                             : "rgba(255,255,255,0.84)",
-                          lineHeight: 1.7,
+                          lineHeight: 1.65,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {step}
@@ -699,81 +666,55 @@ export default async function OpportunityDetailPage({
             </div>
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
+          <div style={standardCardStyle}>
             <p style={blueEyebrowStyle}>
               Recommended AI Stack
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 20px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               Use a complete workflow.
             </h2>
 
             {recommendedStacks.length > 0 ? (
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 12 }}>
                 {recommendedStacks.map(
                   ({ stack, reason }) => (
                     <div
                       key={stack.id}
                       style={resourceCardStyle}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          gap: 16,
-                          flexWrap: "wrap",
-                        }}
+                      <h3 style={resourceTitleStyle}>
+                        {stack.name}
+                      </h3>
+
+                      <p style={resourceTextStyle}>
+                        {reason || stack.description}
+                      </p>
+
+                      <Link
+                        href={`/stacks/${stack.slug}`}
+                        className="btn btn-primary"
+                        style={{ marginTop: 16 }}
                       >
-                        <div style={{ maxWidth: 720 }}>
-                          <h3
-                            style={{
-                              margin: 0,
-                              fontSize: 24,
-                            }}
-                          >
-                            {stack.name}
-                          </h3>
-
-                          <p style={resourceTextStyle}>
-                            {reason || stack.description}
-                          </p>
-                        </div>
-
-                        <Link
-                          href={`/stacks/${stack.slug}`}
-                          className="btn btn-primary"
-                        >
-                          Open Workflow →
-                        </Link>
-                      </div>
+                        Open Workflow →
+                      </Link>
                     </div>
                   )
                 )}
               </div>
             ) : (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={sectionTextStyle}>
                 No recommended stack has been assigned yet.
               </p>
             )}
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
+          <div style={standardCardStyle}>
             <p style={blueEyebrowStyle}>
               Recommended Tools
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 20px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               The individual tools behind the workflow.
             </h2>
 
@@ -782,8 +723,8 @@ export default async function OpportunityDetailPage({
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: 14,
+                    "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+                  gap: 12,
                 }}
               >
                 {recommendedTools.map(
@@ -796,12 +737,7 @@ export default async function OpportunityDetailPage({
                         Tool {index + 1}
                       </p>
 
-                      <h3
-                        style={{
-                          margin: "8px 0 0",
-                          fontSize: 22,
-                        }}
-                      >
+                      <h3 style={resourceTitleStyle}>
                         {tool.name}
                       </h3>
 
@@ -809,14 +745,7 @@ export default async function OpportunityDetailPage({
                         {reason || tool.tagline}
                       </p>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          flexWrap: "wrap",
-                          marginTop: 14,
-                        }}
-                      >
+                      <div style={pillRowStyle}>
                         <span style={smallMetricStyle}>
                           {tool.pricing_model ??
                             "Pricing varies"}
@@ -838,77 +767,53 @@ export default async function OpportunityDetailPage({
                 )}
               </div>
             ) : (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={sectionTextStyle}>
                 No recommended tools have been assigned yet.
               </p>
             )}
           </div>
 
           <div
-            className="card"
             style={{
-              padding: 30,
+              ...standardCardStyle,
               border: "1px solid rgba(34,197,94,0.24)",
               background: "rgba(34,197,94,0.035)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#86efac",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={greenEyebrowStyle}>
               Proof of Value
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 10px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               What happened when you applied this?
             </h2>
 
-            <p
-              style={{
-                margin: "0 0 22px",
-                color: "var(--muted)",
-                lineHeight: 1.7,
-                maxWidth: 820,
-              }}
-            >
+            <p style={sectionTextStyle}>
               Record a real outcome so AITFM can help you track
               the value you are getting from your work over
               time.
             </p>
 
-            <RecordOutcomeForm
-              sourceType="opportunity"
-              sourceId={opportunity.id}
-              sourceSlug={opportunity.slug}
-            />
+            <div style={{ marginTop: 20 }}>
+              <RecordOutcomeForm
+                sourceType="opportunity"
+                sourceId={opportunity.id}
+                sourceSlug={opportunity.slug}
+              />
+            </div>
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
+          <div style={standardCardStyle}>
             <p style={blueEyebrowStyle}>
               Your Recorded Outcomes
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 20px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               Results from this opportunity.
             </h2>
 
             {outcomes && outcomes.length > 0 ? (
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 12 }}>
                 {outcomes.map((outcome) => (
                   <div
                     key={outcome.id}
@@ -916,69 +821,45 @@ export default async function OpportunityDetailPage({
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 16,
-                        flexWrap: "wrap",
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+                        gap: 12,
+                        alignItems: "start",
                       }}
                     >
                       <div>
-                        <p
-                          style={{
-                            margin: 0,
-                            color: "#86efac",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            textTransform: "uppercase",
-                          }}
-                        >
+                        <p style={greenEyebrowStyle}>
                           {formatOutcomeType(
                             outcome.outcome_type
                           )}
                         </p>
 
-                        <h3
-                          style={{
-                            margin: "7px 0 0",
-                            fontSize: 21,
-                          }}
-                        >
+                        <h3 style={resourceTitleStyle}>
                           {outcome.summary}
                         </h3>
                       </div>
 
                       {outcome.numeric_value !== null ? (
-                        <div
+                        <p
                           style={{
-                            textAlign: "right",
+                            margin: 0,
+                            color: "#bbf7d0",
+                            fontSize: 24,
+                            fontWeight: 900,
                           }}
                         >
-                          <p
-                            style={{
-                              margin: 0,
-                              color: "#bbf7d0",
-                              fontSize: 24,
-                              fontWeight: 900,
-                            }}
-                          >
-                            {formatOutcomeValue(
-                              outcome.outcome_type,
-                              outcome.numeric_value,
-                              outcome.unit
-                            )}
-                          </p>
-                        </div>
+                          {formatOutcomeValue(
+                            outcome.outcome_type,
+                            outcome.numeric_value,
+                            outcome.unit
+                          )}
+                        </p>
                       ) : null}
                     </div>
 
                     {outcome.notes ? (
-                      <p
-                        style={{
-                          margin: "10px 0 0",
-                          color: "var(--muted)",
-                          lineHeight: 1.65,
-                        }}
-                      >
+                      <p style={resourceTextStyle}>
                         {outcome.notes}
                       </p>
                     ) : null}
@@ -999,13 +880,7 @@ export default async function OpportunityDetailPage({
                 ))}
               </div>
             ) : (
-              <p
-                style={{
-                  margin: 0,
-                  color: "var(--muted)",
-                  lineHeight: 1.7,
-                }}
-              >
+              <p style={sectionTextStyle}>
                 No outcomes recorded yet. When you get a real
                 result, record it above.
               </p>
@@ -1013,55 +888,27 @@ export default async function OpportunityDetailPage({
           </div>
 
           <div
-            className="card"
             style={{
-              padding: 30,
+              ...standardCardStyle,
               border: "1px solid rgba(34,197,94,0.2)",
               background: "rgba(34,197,94,0.04)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#86efac",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={greenEyebrowStyle}>
               Your Next Move
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 10px",
-                fontSize: 30,
-              }}
-            >
+            <h2 style={sectionHeadingStyle}>
               Keep building measurable value.
             </h2>
 
-            <p
-              style={{
-                margin: 0,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-                maxWidth: 800,
-              }}
-            >
+            <p style={sectionTextStyle}>
               Continue the execution plan, use the recommended
               tools and AI Stack, and record actual outcomes as
               you test and improve the workflow.
             </p>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginTop: 18,
-              }}
-            >
+            <div style={buttonRowStyle}>
               {recommendedStacks[0] ? (
                 <Link
                   href={`/stacks/${recommendedStacks[0].stack.slug}`}
@@ -1156,7 +1003,8 @@ function Metric({
   return (
     <div
       style={{
-        padding: 16,
+        minWidth: 0,
+        padding: 14,
         borderRadius: 14,
         border: "1px solid rgba(255,255,255,0.08)",
         background: "rgba(255,255,255,0.035)",
@@ -1179,6 +1027,7 @@ function Metric({
           margin: "6px 0 0",
           color: "#ffffff",
           lineHeight: 1.5,
+          overflowWrap: "anywhere",
         }}
       >
         {value}
@@ -1197,28 +1046,16 @@ function InfoSection({
   content: string;
 }) {
   return (
-    <div className="card" style={{ padding: 30 }}>
+    <div style={standardCardStyle}>
       <p style={blueEyebrowStyle}>
         {eyebrow}
       </p>
 
-      <h2
-        style={{
-          margin: "8px 0 10px",
-          fontSize: 28,
-        }}
-      >
+      <h2 style={sectionHeadingStyle}>
         {title}
       </h2>
 
-      <p
-        style={{
-          margin: 0,
-          color: "var(--muted)",
-          fontSize: 17,
-          lineHeight: 1.75,
-        }}
-      >
+      <p style={sectionTextStyle}>
         {content}
       </p>
     </div>
@@ -1258,12 +1095,53 @@ function formatOutcomeValue(
   return String(value);
 }
 
+const standardCardStyle = {
+  padding: "clamp(20px, 5vw, 30px)",
+  borderRadius: 20,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.025)",
+};
+
+const sectionHeadingStyle = {
+  margin: "8px 0 10px",
+  fontSize: "clamp(26px, 6vw, 30px)",
+  lineHeight: 1.15,
+  overflowWrap: "anywhere" as const,
+};
+
+const sectionTextStyle = {
+  margin: 0,
+  color: "var(--muted)",
+  fontSize: 16,
+  lineHeight: 1.7,
+  overflowWrap: "anywhere" as const,
+};
+
+const buttonRowStyle = {
+  display: "flex",
+  gap: 12,
+  flexWrap: "wrap" as const,
+  marginTop: 18,
+};
+
+const pillRowStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap" as const,
+  marginTop: 14,
+};
+
 const blueEyebrowStyle = {
   margin: 0,
   color: "#60a5fa",
   fontSize: 12,
   fontWeight: 800,
   textTransform: "uppercase" as const,
+};
+
+const greenEyebrowStyle = {
+  ...blueEyebrowStyle,
+  color: "#86efac",
 };
 
 const blueBadgeStyle = {
@@ -1367,10 +1245,17 @@ const secondaryLinkStyle = {
 };
 
 const resourceCardStyle = {
-  padding: 20,
+  minWidth: 0,
+  padding: 18,
   borderRadius: 16,
   border: "1px solid rgba(255,255,255,0.09)",
   background: "rgba(255,255,255,0.035)",
+};
+
+const resourceTitleStyle = {
+  margin: "7px 0 0",
+  fontSize: 22,
+  overflowWrap: "anywhere" as const,
 };
 
 const resourceTextStyle = {
@@ -1378,6 +1263,7 @@ const resourceTextStyle = {
   color: "var(--muted)",
   lineHeight: 1.65,
   fontSize: 14,
+  overflowWrap: "anywhere" as const,
 };
 
 const resourceLinkStyle = {

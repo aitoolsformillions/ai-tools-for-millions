@@ -1,0 +1,143 @@
+.page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 0 90px;
+}
+
+.topActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.hero {
+  margin-bottom: 34px;
+}
+
+.heroTitle {
+  margin: 10px 0 0;
+  font-size: clamp(40px, 7vw, 66px);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.heroText {
+  margin: 16px 0 0;
+  max-width: 780px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.actionRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.sectionTitle {
+  font-size: clamp(28px, 5vw, 40px);
+}
+
+.fullMobileButton {
+  width: auto;
+}
+
+@media (max-width: 899px) {
+  .page {
+    padding-top: 4px;
+    padding-bottom: 60px;
+  }
+
+  .topActions {
+    margin-bottom: 18px;
+  }
+
+  .hero {
+    margin-bottom: 24px;
+  }
+
+  .heroTitle {
+    font-size: clamp(34px, 11vw, 48px);
+    line-height: 1.03;
+  }
+
+  .heroText {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .resultGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .cardHeader {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .actionRow {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .fullMobileButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resultGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionTitle {
+    font-size: 27px;
+  }
+}

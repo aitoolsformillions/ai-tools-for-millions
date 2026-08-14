@@ -103,7 +103,14 @@ export default async function LearningPathPage({
     `)
     .eq("slug", slug)
     .eq("status", "published")
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Learning path detail load error:",
+      error.message
+    );
+  }
 
   if (error || !path) {
     notFound();
@@ -199,12 +206,18 @@ export default async function LearningPathPage({
       }) ?? [];
 
   return (
-    <section>
+    <section
+      style={{
+        width: "100%",
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
       <Link
         href="/learn"
         style={{
           display: "inline-flex",
-          marginBottom: 24,
+          marginBottom: 20,
           color: "#93c5fd",
           textDecoration: "none",
           fontWeight: 700,
@@ -216,8 +229,8 @@ export default async function LearningPathPage({
       <div
         className="card"
         style={{
-          padding: "clamp(28px, 5vw, 48px)",
-          marginBottom: 24,
+          padding: "clamp(22px, 5vw, 46px)",
+          marginBottom: 20,
           border: path.is_featured
             ? "1px solid rgba(96,165,250,0.38)"
             : undefined,
@@ -228,7 +241,7 @@ export default async function LearningPathPage({
             display: "flex",
             gap: 8,
             flexWrap: "wrap",
-            marginBottom: 18,
+            marginBottom: 16,
           }}
         >
           <span style={metricPillStyle}>
@@ -259,9 +272,10 @@ export default async function LearningPathPage({
         <h1
           style={{
             margin: 0,
-            fontSize: "clamp(40px, 7vw, 66px)",
+            fontSize: "clamp(34px, 8vw, 64px)",
             letterSpacing: "-.05em",
-            lineHeight: 1.05,
+            lineHeight: 1.04,
+            overflowWrap: "anywhere",
           }}
         >
           {path.title}
@@ -269,11 +283,12 @@ export default async function LearningPathPage({
 
         <p
           style={{
-            margin: "18px 0 0",
+            margin: "16px 0 0",
             maxWidth: 880,
             color: "var(--muted)",
-            fontSize: 18,
-            lineHeight: 1.75,
+            fontSize: "clamp(16px, 3vw, 18px)",
+            lineHeight: 1.7,
+            overflowWrap: "anywhere",
           }}
         >
           {path.description}
@@ -283,9 +298,9 @@ export default async function LearningPathPage({
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 14,
-            marginTop: 28,
+              "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+            gap: 12,
+            marginTop: 24,
           }}
         >
           <InfoBox
@@ -301,69 +316,37 @@ export default async function LearningPathPage({
       </div>
 
       {locked ? (
-        <div
-          className="card"
-          style={{
-            padding: 30,
-            border: "1px solid rgba(96,165,250,0.35)",
-            background: "rgba(37,99,235,0.08)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#93c5fd",
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: "uppercase",
-            }}
-          >
+        <div style={standardCardStyle}>
+          <p style={blueEyebrowStyle}>
             Pro Learning Path
           </p>
 
-          <h2 style={{ margin: "8px 0 0", fontSize: 30 }}>
+          <h2 style={sectionHeadingStyle}>
             Unlock the complete learning path.
           </h2>
 
-          <p
-            style={{
-              margin: "12px 0 20px",
-              maxWidth: 760,
-              color: "var(--muted)",
-              lineHeight: 1.7,
-            }}
-          >
+          <p style={sectionTextStyle}>
             Pro members get the complete learning sequence,
             connected tools, recommended AI Stacks,
             implementation opportunities, and future exercises.
           </p>
 
-          <Link href="/upgrade" className="btn btn-primary">
+          <Link
+            href="/upgrade"
+            className="btn btn-primary"
+            style={{ marginTop: 18 }}
+          >
             Unlock with Pro
           </Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 20 }}>
-          <div
-            className="card"
-            style={{
-              padding: 30,
-              border: "1px solid rgba(96,165,250,0.22)",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+        <div style={{ display: "grid", gap: 18 }}>
+          <div style={standardCardStyle}>
+            <p style={blueEyebrowStyle}>
               Learning Progress
             </p>
 
-            <h2 style={{ margin: "8px 0 8px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               {progress?.status === "completed"
                 ? "Learning path completed."
                 : progress?.status === "in_progress"
@@ -373,13 +356,7 @@ export default async function LearningPathPage({
                     : "Ready to start learning?"}
             </h2>
 
-            <p
-              style={{
-                margin: 0,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-              }}
-            >
+            <p style={sectionTextStyle}>
               {progress?.status === "completed"
                 ? `You completed all ${modules.length} modules.`
                 : progress?.status === "in_progress"
@@ -426,14 +403,7 @@ export default async function LearningPathPage({
               </div>
             ) : null}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginTop: 18,
-              }}
-            >
+            <div style={buttonRowStyle}>
               {!progress ? (
                 <form action={startLearningPath}>
                   <HiddenFields
@@ -490,24 +460,16 @@ export default async function LearningPathPage({
             </div>
           </div>
 
-          <div className="card" style={{ padding: 30 }}>
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+          <div style={standardCardStyle}>
+            <p style={blueEyebrowStyle}>
               Modules
             </p>
 
-            <h2 style={{ margin: "8px 0 22px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               Your learning roadmap.
             </h2>
 
-            <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {modules.map((module, index) => {
                 const isCompleted =
                   index < completedModules;
@@ -525,9 +487,10 @@ export default async function LearningPathPage({
                     key={`${path.id}-${index}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "48px 1fr",
-                      gap: 16,
-                      padding: 18,
+                      gridTemplateColumns:
+                        "minmax(40px, 48px) minmax(0, 1fr)",
+                      gap: 14,
+                      padding: 16,
                       borderRadius: 16,
                       border:
                         isCurrent || isPausedCurrent
@@ -544,8 +507,8 @@ export default async function LearningPathPage({
                   >
                     <div
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 42,
+                        height: 42,
                         borderRadius: 999,
                         display: "grid",
                         placeItems: "center",
@@ -564,16 +527,8 @@ export default async function LearningPathPage({
                       {isCompleted ? "✓" : index + 1}
                     </div>
 
-                    <div>
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "#60a5fa",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          textTransform: "uppercase",
-                        }}
-                      >
+                    <div style={{ minWidth: 0 }}>
+                      <p style={blueEyebrowStyle}>
                         Module {index + 1}
                       </p>
 
@@ -581,19 +536,14 @@ export default async function LearningPathPage({
                         style={{
                           margin: "5px 0 0",
                           fontSize: 22,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {module.title ??
                           `Module ${index + 1}`}
                       </h3>
 
-                      <p
-                        style={{
-                          margin: "8px 0 0",
-                          color: "var(--muted)",
-                          lineHeight: 1.65,
-                        }}
-                      >
+                      <p style={resourceTextStyle}>
                         {module.summary ??
                           "Learning content coming soon."}
                       </p>
@@ -643,26 +593,17 @@ export default async function LearningPathPage({
           </div>
 
           <div
-            className="card"
             style={{
-              padding: 30,
+              ...standardCardStyle,
               border: "1px solid rgba(167,139,250,0.24)",
               background: "rgba(139,92,246,0.04)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#c4b5fd",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={purpleEyebrowStyle}>
               Learn → Use
             </p>
 
-            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               Practice with the right AI tools.
             </h2>
 
@@ -671,8 +612,8 @@ export default async function LearningPathPage({
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: 14,
+                    "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+                  gap: 12,
                 }}
               >
                 {recommendedTools.map(
@@ -681,7 +622,7 @@ export default async function LearningPathPage({
                       key={tool.id}
                       style={resourceCardStyle}
                     >
-                      <p style={resourceEyebrowStyle}>
+                      <p style={blueEyebrowStyle}>
                         Tool {index + 1}
                       </p>
 
@@ -693,14 +634,7 @@ export default async function LearningPathPage({
                         {reason || tool.tagline}
                       </p>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          flexWrap: "wrap",
-                          marginTop: 14,
-                        }}
-                      >
+                      <div style={pillRowStyle}>
                         <span style={metricPillStyle}>
                           {tool.pricing_model ??
                             "Pricing varies"}
@@ -722,107 +656,71 @@ export default async function LearningPathPage({
                 )}
               </div>
             ) : (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={sectionTextStyle}>
                 No tools have been connected to this path yet.
               </p>
             )}
           </div>
 
-          <div
-            className="card"
-            style={{
-              padding: 30,
-              border: "1px solid rgba(96,165,250,0.22)",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                color: "#60a5fa",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+          <div style={standardCardStyle}>
+            <p style={blueEyebrowStyle}>
               Learn → Build
             </p>
 
-            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               Put the tools together into a workflow.
             </h2>
 
             {recommendedStacks.length > 0 ? (
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 12 }}>
                 {recommendedStacks.map(
                   ({ stack, reason }) => (
                     <div
                       key={stack.id}
                       style={resourceCardStyle}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent:
-                            "space-between",
-                          gap: 16,
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                        }}
+                      <p style={blueEyebrowStyle}>
+                        Recommended AI Stack
+                      </p>
+
+                      <h3 style={resourceTitleStyle}>
+                        {stack.name}
+                      </h3>
+
+                      <p style={resourceTextStyle}>
+                        {reason || stack.description}
+                      </p>
+
+                      <Link
+                        href={`/stacks/${stack.slug}`}
+                        className="btn btn-primary"
+                        style={{ marginTop: 16 }}
                       >
-                        <div style={{ maxWidth: 720 }}>
-                          <p style={resourceEyebrowStyle}>
-                            Recommended AI Stack
-                          </p>
-
-                          <h3 style={resourceTitleStyle}>
-                            {stack.name}
-                          </h3>
-
-                          <p style={resourceTextStyle}>
-                            {reason ||
-                              stack.description}
-                          </p>
-                        </div>
-
-                        <Link
-                          href={`/stacks/${stack.slug}`}
-                          className="btn btn-primary"
-                        >
-                          Open Workflow →
-                        </Link>
-                      </div>
+                        Open Workflow →
+                      </Link>
                     </div>
                   )
                 )}
               </div>
             ) : (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={sectionTextStyle}>
                 No AI Stack has been connected to this path yet.
               </p>
             )}
           </div>
 
           <div
-            className="card"
             style={{
-              padding: 30,
+              ...standardCardStyle,
               border: "1px solid rgba(34,197,94,0.22)",
               background: "rgba(34,197,94,0.035)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#86efac",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={greenEyebrowStyle}>
               Learn → Apply
             </p>
 
-            <h2 style={{ margin: "8px 0 20px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               Apply the skill to a real opportunity.
             </h2>
 
@@ -831,8 +729,8 @@ export default async function LearningPathPage({
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 14,
+                    "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+                  gap: 12,
                 }}
               >
                 {recommendedOpportunities.map(
@@ -845,14 +743,7 @@ export default async function LearningPathPage({
                         key={opportunity.id}
                         style={resourceCardStyle}
                       >
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap",
-                            marginBottom: 12,
-                          }}
-                        >
+                        <div style={pillRowStyle}>
                           <span style={metricPillStyle}>
                             {opportunity.category}
                           </span>
@@ -874,18 +765,10 @@ export default async function LearningPathPage({
                         </h3>
 
                         <p style={resourceTextStyle}>
-                          {reason ||
-                            opportunity.summary}
+                          {reason || opportunity.summary}
                         </p>
 
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap",
-                            marginTop: 14,
-                          }}
-                        >
+                        <div style={pillRowStyle}>
                           <span style={metricPillStyle}>
                             {opportunity.startup_cost ??
                               "Cost varies"}
@@ -901,10 +784,7 @@ export default async function LearningPathPage({
                           <Link
                             href="/upgrade"
                             className="btn btn-primary"
-                            style={{
-                              display: "inline-flex",
-                              marginTop: 16,
-                            }}
+                            style={{ marginTop: 16 }}
                           >
                             Unlock Opportunity
                           </Link>
@@ -922,7 +802,7 @@ export default async function LearningPathPage({
                 )}
               </div>
             ) : (
-              <p style={{ color: "var(--muted)" }}>
+              <p style={sectionTextStyle}>
                 No opportunities have been connected to this
                 path yet.
               </p>
@@ -930,51 +810,28 @@ export default async function LearningPathPage({
           </div>
 
           <div
-            className="card"
             style={{
-              padding: 30,
+              ...standardCardStyle,
               border: "1px solid rgba(34,197,94,0.18)",
               background: "rgba(34,197,94,0.025)",
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                color: "#86efac",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={greenEyebrowStyle}>
               Your Next Move
             </p>
 
-            <h2 style={{ margin: "8px 0 8px", fontSize: 30 }}>
+            <h2 style={sectionHeadingStyle}>
               Turn knowledge into useful action.
             </h2>
 
-            <p
-              style={{
-                margin: 0,
-                maxWidth: 820,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-              }}
-            >
+            <p style={sectionTextStyle}>
               Use the connected tools to practice, open the
               recommended AI Stack to understand how the tools
               work together, and then apply the skill through a
               relevant opportunity.
             </p>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginTop: 18,
-              }}
-            >
+            <div style={buttonRowStyle}>
               {recommendedStacks[0] ? (
                 <Link
                   href={`/stacks/${recommendedStacks[0].stack.slug}`}
@@ -1032,7 +889,8 @@ function InfoBox({
   return (
     <div
       style={{
-        padding: 16,
+        minWidth: 0,
+        padding: 15,
         borderRadius: 14,
         background: "rgba(255,255,255,0.035)",
         border: "1px solid rgba(255,255,255,0.08)",
@@ -1055,6 +913,7 @@ function InfoBox({
           margin: "6px 0 0",
           color: "#ffffff",
           lineHeight: 1.55,
+          overflowWrap: "anywhere",
         }}
       >
         {value}
@@ -1062,6 +921,60 @@ function InfoBox({
     </div>
   );
 }
+
+const standardCardStyle = {
+  padding: "clamp(20px, 5vw, 30px)",
+  borderRadius: 20,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.025)",
+};
+
+const sectionHeadingStyle = {
+  margin: "8px 0 10px",
+  fontSize: "clamp(26px, 6vw, 30px)",
+  lineHeight: 1.15,
+  overflowWrap: "anywhere" as const,
+};
+
+const sectionTextStyle = {
+  margin: 0,
+  color: "var(--muted)",
+  fontSize: 16,
+  lineHeight: 1.7,
+  overflowWrap: "anywhere" as const,
+};
+
+const buttonRowStyle = {
+  display: "flex",
+  gap: 12,
+  flexWrap: "wrap" as const,
+  marginTop: 18,
+};
+
+const pillRowStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap" as const,
+  marginTop: 14,
+};
+
+const blueEyebrowStyle = {
+  margin: 0,
+  color: "#60a5fa",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
+
+const purpleEyebrowStyle = {
+  ...blueEyebrowStyle,
+  color: "#c4b5fd",
+};
+
+const greenEyebrowStyle = {
+  ...blueEyebrowStyle,
+  color: "#86efac",
+};
 
 const metricPillStyle = {
   padding: "7px 10px",
@@ -1134,23 +1047,17 @@ const secondaryLinkStyle = {
 };
 
 const resourceCardStyle = {
-  padding: 20,
+  minWidth: 0,
+  padding: 18,
   borderRadius: 16,
   border: "1px solid rgba(255,255,255,0.09)",
   background: "rgba(255,255,255,0.035)",
 };
 
-const resourceEyebrowStyle = {
-  margin: 0,
-  color: "#60a5fa",
-  fontSize: 11,
-  fontWeight: 800,
-  textTransform: "uppercase" as const,
-};
-
 const resourceTitleStyle = {
   margin: "7px 0 0",
   fontSize: 22,
+  overflowWrap: "anywhere" as const,
 };
 
 const resourceTextStyle = {
@@ -1158,6 +1065,7 @@ const resourceTextStyle = {
   color: "var(--muted)",
   lineHeight: 1.65,
   fontSize: 14,
+  overflowWrap: "anywhere" as const,
 };
 
 const resourceLinkStyle = {

@@ -6,6 +6,7 @@ import {
   recordRecommendationEvent,
   dismissRecommendation,
 } from "@/app/(app)/recommendations/actions";
+import styles from "./dashboard.module.css";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -80,8 +81,7 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ||
     "there";
 
-  const isPro =
-    profile?.membership_tier === "pro";
+  const isPro = profile?.membership_tier === "pro";
 
   const totalMoneyEarned = Number(
     outcomeSummary?.total_money_earned ?? 0
@@ -143,89 +143,66 @@ export default async function DashboardPage() {
   }
 
   const progressItems =
-    progressRows
-      ?.flatMap((row) => {
-        const opportunities = Array.isArray(
-          row.opportunities
+    progressRows?.flatMap((row) => {
+      const opportunities = Array.isArray(row.opportunities)
+        ? row.opportunities
+        : row.opportunities
+          ? [row.opportunities]
+          : [];
+
+      return opportunities.map((opportunity) => {
+        const executionSteps = Array.isArray(
+          opportunity.execution_steps
         )
-          ? row.opportunities
-          : row.opportunities
-            ? [row.opportunities]
-            : [];
+          ? opportunity.execution_steps.filter(
+              (step): step is string =>
+                typeof step === "string"
+            )
+          : [];
 
-        return opportunities.map(
-          (opportunity) => {
-            const executionSteps =
-              Array.isArray(
-                opportunity.execution_steps
-              )
-                ? opportunity.execution_steps.filter(
-                    (
-                      step
-                    ): step is string =>
-                      typeof step === "string"
-                  )
-                : [];
+        const totalSteps = executionSteps.length;
 
-            const totalSteps =
-              executionSteps.length;
-
-            const completedSteps =
-              row.status === "completed"
-                ? totalSteps
-                : Math.min(
-                    row.current_step ?? 0,
-                    totalSteps
-                  );
-
-            const progressPercent =
-              totalSteps > 0
-                ? Math.round(
-                    (completedSteps /
-                      totalSteps) *
-                      100
-                  )
-                : 0;
-
-            return {
-              id: row.id,
-              status: row.status,
-              currentStep:
+        const completedSteps =
+          row.status === "completed"
+            ? totalSteps
+            : Math.min(
                 row.current_step ?? 0,
-              startedAt: row.started_at,
-              completedAt:
-                row.completed_at,
-              lastOpenedAt:
-                row.last_opened_at,
-              opportunity,
-              totalSteps,
-              completedSteps,
-              progressPercent,
-            };
-          }
-        );
-      }) ?? [];
+                totalSteps
+              );
 
-  const activeItems =
-    progressItems.filter(
-      (item) =>
-        item.status === "in_progress" ||
-        item.status === "paused"
-    );
+        const progressPercent =
+          totalSteps > 0
+            ? Math.round(
+                (completedSteps / totalSteps) * 100
+              )
+            : 0;
 
-  const savedItems =
-    progressItems.filter(
-      (item) => item.status === "saved"
-    );
+        return {
+          id: row.id,
+          status: row.status,
+          opportunity,
+          totalSteps,
+          completedSteps,
+          progressPercent,
+        };
+      });
+    }) ?? [];
 
-  const completedItems =
-    progressItems.filter(
-      (item) =>
-        item.status === "completed"
-    );
+  const activeItems = progressItems.filter(
+    (item) =>
+      item.status === "in_progress" ||
+      item.status === "paused"
+  );
 
-  const continueItem =
-    activeItems[0] ?? null;
+  const savedItems = progressItems.filter(
+    (item) => item.status === "saved"
+  );
+
+  const completedItems = progressItems.filter(
+    (item) => item.status === "completed"
+  );
+
+  const continueItem = activeItems[0] ?? null;
 
   const {
     data: learningProgressRows,
@@ -236,9 +213,6 @@ export default async function DashboardPage() {
       id,
       status,
       current_module,
-      started_at,
-      completed_at,
-      last_opened_at,
       learning_paths (
         id,
         title,
@@ -264,73 +238,55 @@ export default async function DashboardPage() {
   }
 
   const learningItems =
-    learningProgressRows
-      ?.flatMap((row) => {
-        const paths = Array.isArray(
-          row.learning_paths
-        )
-          ? row.learning_paths
-          : row.learning_paths
-            ? [row.learning_paths]
-            : [];
+    learningProgressRows?.flatMap((row) => {
+      const paths = Array.isArray(row.learning_paths)
+        ? row.learning_paths
+        : row.learning_paths
+          ? [row.learning_paths]
+          : [];
 
-        return paths.map((path) => {
-          const modules = Array.isArray(
-            path.modules
-          )
-            ? path.modules
-            : [];
+      return paths.map((path) => {
+        const modules = Array.isArray(path.modules)
+          ? path.modules
+          : [];
 
-          const totalModules =
-            modules.length;
+        const totalModules = modules.length;
 
-          const completedModules =
-            row.status === "completed"
-              ? totalModules
-              : Math.min(
-                  row.current_module ?? 0,
-                  totalModules
-                );
+        const completedModules =
+          row.status === "completed"
+            ? totalModules
+            : Math.min(
+                row.current_module ?? 0,
+                totalModules
+              );
 
-          const progressPercent =
-            totalModules > 0
-              ? Math.round(
-                  (completedModules /
-                    totalModules) *
-                    100
-                )
-              : 0;
+        const progressPercent =
+          totalModules > 0
+            ? Math.round(
+                (completedModules / totalModules) * 100
+              )
+            : 0;
 
-          return {
-            id: row.id,
-            status: row.status,
-            currentModule:
-              row.current_module ?? 0,
-            startedAt: row.started_at,
-            completedAt:
-              row.completed_at,
-            lastOpenedAt:
-              row.last_opened_at,
-            path,
-            totalModules,
-            completedModules,
-            progressPercent,
-          };
-        });
-      }) ?? [];
+        return {
+          id: row.id,
+          status: row.status,
+          path,
+          totalModules,
+          completedModules,
+          progressPercent,
+        };
+      });
+    }) ?? [];
 
-  const activeLearningItems =
-    learningItems.filter(
-      (item) =>
-        item.status === "in_progress" ||
-        item.status === "paused"
-    );
+  const activeLearningItems = learningItems.filter(
+    (item) =>
+      item.status === "in_progress" ||
+      item.status === "paused"
+  );
 
-  const completedLearningItems =
-    learningItems.filter(
-      (item) =>
-        item.status === "completed"
-    );
+  const completedLearningItems = learningItems.filter(
+    (item) => item.status === "completed"
+  );
 
   const continueLearningItem =
     activeLearningItems[0] ?? null;
@@ -338,30 +294,22 @@ export default async function DashboardPage() {
   const opportunityEvents =
     (recommendationEvents ?? []).filter(
       (event) =>
-        event.recommendation_type ===
-        "opportunity"
+        event.recommendation_type === "opportunity"
     );
 
   const learningEvents =
     (recommendationEvents ?? []).filter(
       (event) =>
-        event.recommendation_type ===
-        "learning_path"
+        event.recommendation_type === "learning_path"
     );
 
-  const dismissedOpportunityIds =
-    new Set(
-      opportunityEvents
-        .filter(
-          (event) =>
-            event.event_type ===
-            "dismissed"
-        )
-        .map(
-          (event) =>
-            event.recommendation_id
-        )
-    );
+  const dismissedOpportunityIds = new Set(
+    opportunityEvents
+      .filter(
+        (event) => event.event_type === "dismissed"
+      )
+      .map((event) => event.recommendation_id)
+  );
 
   const openedOpportunityCounts =
     new Map<string, number>();
@@ -388,39 +336,31 @@ export default async function DashboardPage() {
       );
     }
 
-    if (
-      event.event_type === "completed"
-    ) {
+    if (event.event_type === "completed") {
       completedOpportunityBehaviorIds.add(
         event.recommendation_id
       );
     }
   }
 
-  const learningStarts =
-    learningEvents.filter(
-      (event) =>
-        event.event_type === "started"
-    ).length;
+  const learningStarts = learningEvents.filter(
+    (event) => event.event_type === "started"
+  ).length;
 
-  const learningCompletions =
-    learningEvents.filter(
-      (event) =>
-        event.event_type === "completed"
-    ).length;
+  const learningCompletions = learningEvents.filter(
+    (event) => event.event_type === "completed"
+  ).length;
 
   const highestCompletedLearningLevel =
     getHighestCompletedLearningLevel(
       completedLearningItems.map(
-        (item) =>
-          item.path.experience_level
+        (item) => item.path.experience_level
       )
     );
 
-  const preferredCategory =
-    mapGoalToCategory(
-      preferences?.primary_goal
-    );
+  const preferredCategory = mapGoalToCategory(
+    preferences?.primary_goal
+  );
 
   const {
     data: recommendationCandidates,
@@ -457,47 +397,31 @@ export default async function DashboardPage() {
     pickRecommendedOpportunity({
       opportunities:
         recommendationCandidates ?? [],
-
       preferredCategory,
-
       experienceLevel:
-        preferences?.experience_level ??
-        "Beginner",
-
+        preferences?.experience_level ?? "Beginner",
       businessInterest:
-        preferences?.business_interest ??
-        "Other",
-
+        preferences?.business_interest ?? "Other",
       monthlyBudget:
-        preferences?.monthly_budget ??
-        "$0-$100",
-
+        preferences?.monthly_budget ?? "$0-$100",
       completedIds: new Set(
         completedItems.map(
-          (item) =>
-            item.opportunity.id
+          (item) => item.opportunity.id
         )
       ),
-
       activeIds: new Set(
         activeItems.map(
-          (item) =>
-            item.opportunity.id
+          (item) => item.opportunity.id
         )
       ),
-
       dismissedIds:
         dismissedOpportunityIds,
-
       openedCounts:
         openedOpportunityCounts,
-
       startedBehaviorIds:
         startedOpportunityIds,
-
       completedBehaviorIds:
         completedOpportunityBehaviorIds,
-
       totalMoneyEarned,
       totalTimeSaved,
       totalLeadsGenerated,
@@ -508,107 +432,47 @@ export default async function DashboardPage() {
       highestCompletedLearningLevel,
     });
 
-  const adaptiveReason =
-    buildAdaptiveReason({
-      primaryGoal:
-        preferences?.primary_goal,
-      totalMoneyEarned,
-      totalTimeSaved,
-      totalLeadsGenerated,
-      totalTasksAutomated,
-      learningCompletions,
-      highestCompletedLearningLevel,
-    });
+  const adaptiveReason = buildAdaptiveReason({
+    primaryGoal: preferences?.primary_goal,
+    totalMoneyEarned,
+    totalTimeSaved,
+    totalLeadsGenerated,
+    totalTasksAutomated,
+    learningCompletions,
+    highestCompletedLearningLevel,
+  });
 
   return (
-    <main
-      className="container"
-      style={{
-        padding: "56px 0 90px",
-      }}
-    >
+    <main className={styles.page}>
       <form
         action={signOut}
-        style={{
-          display: "flex",
-          justifyContent:
-            "flex-end",
-          marginBottom: 24,
-        }}
+        className={styles.topActions}
       >
         <button
           type="submit"
-          style={{
-            padding: "10px 18px",
-            borderRadius: 10,
-            border:
-              "1px solid rgba(255,255,255,0.25)",
-            background:
-              "rgba(255,255,255,0.08)",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
+          style={secondaryButtonStyle}
         >
           Sign Out
         </button>
       </form>
 
-      <section
-        style={{
-          marginBottom: 34,
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            color: "#60a5fa",
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}
-        >
+      <section className={styles.hero}>
+        <p style={blueEyebrowStyle}>
           Member Dashboard
         </p>
 
-        <h1
-          style={{
-            margin: "10px 0 0",
-            fontSize:
-              "clamp(40px, 7vw, 66px)",
-            letterSpacing: "-.05em",
-            lineHeight: 1.05,
-          }}
-        >
+        <h1 className={styles.heroTitle}>
           Welcome back, {displayName}.
         </h1>
 
-        <p
-          style={{
-            margin: "16px 0 0",
-            color: "var(--muted)",
-            fontSize: 18,
-            lineHeight: 1.7,
-            maxWidth: 780,
-          }}
-        >
-          Learn AI, build useful systems,
-          measure your results, and let
-          AITFM improve what it recommends
-          as you use the platform.
+        <p className={styles.heroText}>
+          Learn AI, build useful systems, measure your
+          results, and let AITFM improve what it
+          recommends as you use the platform.
         </p>
       </section>
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(175px, 1fr))",
-          gap: 14,
-          marginBottom: 28,
-        }}
-      >
+      <section className={styles.statGrid}>
         <StatCard
           label="Active Opportunities"
           value={activeItems.length}
@@ -621,9 +485,7 @@ export default async function DashboardPage() {
 
         <StatCard
           label="Active Learning"
-          value={
-            activeLearningItems.length
-          }
+          value={activeLearningItems.length}
         />
 
         <StatCard
@@ -633,79 +495,29 @@ export default async function DashboardPage() {
 
         <StatCard
           label="Membership"
-          value={
-            isPro ? "Pro" : "Free"
-          }
+          value={isPro ? "Pro" : "Free"}
         />
       </section>
 
-      <section
-        className="card"
-        style={{
-          padding:
-            "clamp(24px, 5vw, 38px)",
-          marginBottom: 28,
-          border:
-            "1px solid rgba(34,197,94,0.24)",
-          background:
-            "rgba(34,197,94,0.035)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "flex-start",
-            gap: 20,
-            flexWrap: "wrap",
-          }}
-        >
+      <section style={resultsSectionStyle}>
+        <div className={styles.cardHeader}>
           <div>
-            <p
-              style={{
-                margin: 0,
-                color: "#86efac",
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform:
-                  "uppercase",
-                letterSpacing:
-                  "0.08em",
-              }}
-            >
+            <p style={greenEyebrowStyle}>
               Your AITFM Results
             </p>
 
-            <h2
-              style={{
-                margin: "8px 0 8px",
-                fontSize:
-                  "clamp(28px, 5vw, 40px)",
-              }}
-            >
-              Your AI value is becoming
-              measurable.
+            <h2 className={styles.sectionTitle}>
+              Your AI value is becoming measurable.
             </h2>
 
-            <p
-              style={{
-                margin: 0,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-                maxWidth: 760,
-              }}
-            >
-              These totals come from the
-              real outcomes you record
-              while applying AITFM
-              workflows and opportunities.
+            <p style={sectionTextStyle}>
+              These totals come from the real outcomes
+              you record while applying AITFM workflows
+              and opportunities.
             </p>
           </div>
 
-          <span
-            style={resultsBadgeStyle}
-          >
+          <span style={resultsBadgeStyle}>
             {totalOutcomes} recorded{" "}
             {totalOutcomes === 1
               ? "outcome"
@@ -713,15 +525,7 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(170px, 1fr))",
-            gap: 14,
-            marginTop: 24,
-          }}
-        >
+        <div className={styles.resultGrid}>
           <ResultCard
             label="Money Earned"
             value={`$${formatNumber(
@@ -752,94 +556,33 @@ export default async function DashboardPage() {
 
           <ResultCard
             label="Skills Gained"
-            value={formatNumber(
-              skillsGained
-            )}
+            value={formatNumber(skillsGained)}
           />
         </div>
       </section>
 
       {continueItem ? (
-        <section
-          className="card"
-          style={{
-            padding:
-              "clamp(24px, 5vw, 38px)",
-            marginBottom: 28,
-            border:
-              continueItem.status ===
-              "paused"
-                ? "1px solid rgba(251,191,36,0.28)"
-                : "1px solid rgba(96,165,250,0.3)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              gap: 22,
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: 760,
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color:
-                    continueItem.status ===
-                    "paused"
-                      ? "#fde68a"
-                      : "#60a5fa",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  textTransform:
-                    "uppercase",
-                  letterSpacing:
-                    "0.08em",
-                }}
-              >
+        <section style={standardSectionStyle}>
+          <div className={styles.cardHeader}>
+            <div style={{ maxWidth: 760 }}>
+              <p style={blueEyebrowStyle}>
                 Continue Building
               </p>
 
-              <h2
-                style={{
-                  margin: "8px 0 0",
-                  fontSize:
-                    "clamp(28px, 5vw, 40px)",
-                }}
-              >
-                {
-                  continueItem
-                    .opportunity.title
-                }
+              <h2 className={styles.sectionTitle}>
+                {continueItem.opportunity.title}
               </h2>
 
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "var(--muted)",
-                  lineHeight: 1.7,
-                }}
-              >
-                {
-                  continueItem
-                    .opportunity.summary
-                }
+              <p style={sectionTextStyle}>
+                {continueItem.opportunity.summary}
               </p>
             </div>
 
             <Link
               href={`/opportunities/${continueItem.opportunity.slug}`}
-              className="btn btn-primary"
+              className={`btn btn-primary ${styles.fullMobileButton}`}
             >
-              {continueItem.status ===
-              "paused"
+              {continueItem.status === "paused"
                 ? "Resume Opportunity →"
                 : "Continue Opportunity →"}
             </Link>
@@ -847,102 +590,38 @@ export default async function DashboardPage() {
 
           <ProgressBar
             label={
-              continueItem.status ===
-              "paused"
+              continueItem.status === "paused"
                 ? "Paused"
                 : "Progress"
             }
-            percent={
-              continueItem.progressPercent
-            }
+            percent={continueItem.progressPercent}
             footer={`${continueItem.completedSteps} of ${continueItem.totalSteps} execution steps completed`}
           />
         </section>
       ) : null}
 
       {continueLearningItem ? (
-        <section
-          className="card"
-          style={{
-            padding:
-              "clamp(24px, 5vw, 38px)",
-            marginBottom: 28,
-            border:
-              continueLearningItem.status ===
-              "paused"
-                ? "1px solid rgba(251,191,36,0.28)"
-                : "1px solid rgba(167,139,250,0.3)",
-            background:
-              "rgba(139,92,246,0.04)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              gap: 22,
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: 760,
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color:
-                    continueLearningItem.status ===
-                    "paused"
-                      ? "#fde68a"
-                      : "#c4b5fd",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  textTransform:
-                    "uppercase",
-                  letterSpacing:
-                    "0.08em",
-                }}
-              >
+        <section style={learningSectionStyle}>
+          <div className={styles.cardHeader}>
+            <div style={{ maxWidth: 760 }}>
+              <p style={purpleEyebrowStyle}>
                 Continue Learning
               </p>
 
-              <h2
-                style={{
-                  margin: "8px 0 0",
-                  fontSize:
-                    "clamp(28px, 5vw, 40px)",
-                }}
-              >
-                {
-                  continueLearningItem
-                    .path.title
-                }
+              <h2 className={styles.sectionTitle}>
+                {continueLearningItem.path.title}
               </h2>
 
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "var(--muted)",
-                  lineHeight: 1.7,
-                }}
-              >
-                {
-                  continueLearningItem
-                    .path.description
-                }
+              <p style={sectionTextStyle}>
+                {continueLearningItem.path.description}
               </p>
             </div>
 
             <Link
               href={`/learn/${continueLearningItem.path.slug}`}
-              className="btn btn-primary"
+              className={`btn btn-primary ${styles.fullMobileButton}`}
             >
-              {continueLearningItem.status ===
-              "paused"
+              {continueLearningItem.status === "paused"
                 ? "Resume Learning →"
                 : "Continue Learning →"}
             </Link>
@@ -950,8 +629,7 @@ export default async function DashboardPage() {
 
           <ProgressBar
             label={
-              continueLearningItem.status ===
-              "paused"
+              continueLearningItem.status === "paused"
                 ? "Paused"
                 : "Learning Progress"
             }
@@ -965,107 +643,39 @@ export default async function DashboardPage() {
 
       {preferences?.onboarding_complete &&
       recommendedOpportunity ? (
-        <section
-          className="card"
-          style={{
-            padding:
-              "clamp(24px, 5vw, 38px)",
-            marginBottom: 28,
-            border:
-              "1px solid rgba(34,197,94,0.28)",
-            background:
-              "rgba(34,197,94,0.045)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#86efac",
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform:
-                "uppercase",
-              letterSpacing:
-                "0.08em",
-            }}
-          >
+        <section style={adaptiveSectionStyle}>
+          <p style={greenEyebrowStyle}>
             Adaptive Recommendation
           </p>
 
           <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              gap: 22,
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-              marginTop: 8,
-            }}
+            className={styles.cardHeader}
+            style={{ marginTop: 8 }}
           >
-            <div
-              style={{
-                maxWidth: 780,
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize:
-                    "clamp(28px, 5vw, 40px)",
-                }}
-              >
-                {
-                  recommendedOpportunity.title
-                }
+            <div style={{ maxWidth: 780 }}>
+              <h2 className={styles.sectionTitle}>
+                {recommendedOpportunity.title}
               </h2>
 
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "var(--muted)",
-                  lineHeight: 1.7,
-                }}
-              >
-                {
-                  recommendedOpportunity.summary
-                }
+              <p style={sectionTextStyle}>
+                {recommendedOpportunity.summary}
               </p>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 16,
-                }}
-              >
-                <span
-                  style={statusPillStyle}
-                >
-                  {
-                    recommendedOpportunity.category
-                  }
+              <div style={pillRowStyle}>
+                <span style={statusPillStyle}>
+                  {recommendedOpportunity.category}
                 </span>
 
-                <span
-                  style={statusPillStyle}
-                >
-                  {
-                    recommendedOpportunity.difficulty
-                  }
+                <span style={statusPillStyle}>
+                  {recommendedOpportunity.difficulty}
                 </span>
 
-                <span
-                  style={statusPillStyle}
-                >
+                <span style={statusPillStyle}>
                   {recommendedOpportunity.startup_cost ??
                     "Cost varies"}
                 </span>
 
-                <span
-                  style={statusPillStyle}
-                >
+                <span style={statusPillStyle}>
                   Score{" "}
                   {recommendedOpportunity.opportunity_score ??
                     "—"}
@@ -1073,56 +683,19 @@ export default async function DashboardPage() {
                 </span>
               </div>
 
-              <div
-                style={{
-                  marginTop: 18,
-                  padding: 16,
-                  borderRadius: 14,
-                  background:
-                    "rgba(34,197,94,0.06)",
-                  border:
-                    "1px solid rgba(34,197,94,0.14)",
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    color: "#bbf7d0",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform:
-                      "uppercase",
-                  }}
-                >
+              <div style={reasonBoxStyle}>
+                <p style={reasonLabelStyle}>
                   Why AITFM chose this
                 </p>
 
-                <p
-                  style={{
-                    margin: "7px 0 0",
-                    color:
-                      "rgba(255,255,255,0.78)",
-                    lineHeight: 1.65,
-                    fontSize: 14,
-                  }}
-                >
+                <p style={reasonTextStyle}>
                   {adaptiveReason}
                 </p>
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <form
-                action={
-                  recordRecommendationEvent
-                }
-              >
+            <div className={styles.actionRow}>
+              <form action={recordRecommendationEvent}>
                 <input
                   type="hidden"
                   name="recommendationType"
@@ -1132,9 +705,7 @@ export default async function DashboardPage() {
                 <input
                   type="hidden"
                   name="recommendationId"
-                  value={
-                    recommendedOpportunity.id
-                  }
+                  value={recommendedOpportunity.id}
                 />
 
                 <input
@@ -1157,17 +728,13 @@ export default async function DashboardPage() {
 
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className={`btn btn-primary ${styles.fullMobileButton}`}
                 >
                   View Recommendation →
                 </button>
               </form>
 
-              <form
-                action={
-                  dismissRecommendation
-                }
-              >
+              <form action={dismissRecommendation}>
                 <input
                   type="hidden"
                   name="recommendationType"
@@ -1177,9 +744,7 @@ export default async function DashboardPage() {
                 <input
                   type="hidden"
                   name="recommendationId"
-                  value={
-                    recommendedOpportunity.id
-                  }
+                  value={recommendedOpportunity.id}
                 />
 
                 <input
@@ -1190,9 +755,8 @@ export default async function DashboardPage() {
 
                 <button
                   type="submit"
-                  style={
-                    dismissButtonStyle
-                  }
+                  className={styles.fullMobileButton}
+                  style={dismissButtonStyle}
                 >
                   Not Interested
                 </button>
@@ -1200,73 +764,9 @@ export default async function DashboardPage() {
             </div>
           </div>
         </section>
-      ) : (
-        <section
-          className="card"
-          style={{
-            padding: 30,
-            marginBottom: 28,
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#60a5fa",
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform:
-                "uppercase",
-            }}
-          >
-            Adaptive Recommendation
-          </p>
+      ) : null}
 
-          <h2
-            style={{
-              margin: "8px 0 8px",
-              fontSize: 30,
-            }}
-          >
-            Keep using AITFM to improve
-            your recommendations.
-          </h2>
-
-          <p
-            style={{
-              margin: 0,
-              color: "var(--muted)",
-              lineHeight: 1.7,
-              maxWidth: 760,
-            }}
-          >
-            Your preferences, learning
-            activity, opportunity progress,
-            dismissals, and recorded
-            outcomes all become signals for
-            future recommendations.
-          </p>
-
-          <Link
-            href="/opportunities"
-            className="btn btn-primary"
-            style={{
-              display: "inline-flex",
-              marginTop: 18,
-            }}
-          >
-            Explore Opportunities
-          </Link>
-        </section>
-      )}
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 20,
-        }}
-      >
+      <section className={styles.featureGrid}>
         <DashboardCard
           eyebrow="AITFM Learning"
           title="Build practical AI skills"
@@ -1320,9 +820,7 @@ export default async function DashboardPage() {
               : "Upgrade to unlock premium opportunities, learning paths, AI Stacks, and deeper member intelligence."
           }
           href={
-            isPro
-              ? "/settings"
-              : "/upgrade"
+            isPro ? "/settings" : "/upgrade"
           }
           linkText={
             isPro
@@ -1396,62 +894,46 @@ function pickRecommendedOpportunity({
   const ranked = opportunities
     .filter(
       (opportunity) =>
-        !completedIds.has(
-          opportunity.id
-        ) &&
-        !activeIds.has(
-          opportunity.id
-        ) &&
-        !dismissedIds.has(
-          opportunity.id
-        ) &&
-        !completedBehaviorIds.has(
-          opportunity.id
-        )
+        !completedIds.has(opportunity.id) &&
+        !activeIds.has(opportunity.id) &&
+        !dismissedIds.has(opportunity.id) &&
+        !completedBehaviorIds.has(opportunity.id)
     )
     .map((opportunity) => {
       let score =
         Number(
-          opportunity.opportunity_score ??
-            0
+          opportunity.opportunity_score ?? 0
         ) * 10;
 
       if (
         preferredCategory &&
-        opportunity.category ===
-          preferredCategory
+        opportunity.category === preferredCategory
       ) {
         score += 30;
       }
 
       if (
-        opportunity.difficulty ===
-        experienceLevel
+        opportunity.difficulty === experienceLevel
       ) {
         score += 14;
       }
 
       if (
-        experienceLevel ===
-          "Beginner" &&
-        opportunity.difficulty ===
-          "Intermediate"
+        experienceLevel === "Beginner" &&
+        opportunity.difficulty === "Intermediate"
       ) {
         score -= 6;
       }
 
       if (
-        experienceLevel ===
-          "Advanced" &&
-        opportunity.difficulty ===
-          "Beginner"
+        experienceLevel === "Advanced" &&
+        opportunity.difficulty === "Beginner"
       ) {
         score -= 4;
       }
 
       if (
-        businessInterest !==
-          "Other" &&
+        businessInterest !== "Other" &&
         opportunity.target_customer
           .toLowerCase()
           .includes(
@@ -1466,11 +948,8 @@ function pickRecommendedOpportunity({
       }
 
       if (
-        monthlyBudget ===
-          "$0-$100" &&
-        opportunity.startup_cost?.includes(
-          "$0-"
-        )
+        monthlyBudget === "$0-$100" &&
+        opportunity.startup_cost?.includes("$0-")
       ) {
         score += 8;
       }
@@ -1487,15 +966,9 @@ function pickRecommendedOpportunity({
       ) {
         if (
           category.includes("money") ||
-          titleAndSummary.includes(
-            "lead"
-          ) ||
-          titleAndSummary.includes(
-            "revenue"
-          ) ||
-          titleAndSummary.includes(
-            "customer"
-          )
+          titleAndSummary.includes("lead") ||
+          titleAndSummary.includes("revenue") ||
+          titleAndSummary.includes("customer")
         ) {
           score += 16;
         }
@@ -1507,18 +980,10 @@ function pickRecommendedOpportunity({
       ) {
         if (
           category.includes("time") ||
-          titleAndSummary.includes(
-            "automation"
-          ) ||
-          titleAndSummary.includes(
-            "workflow"
-          ) ||
-          titleAndSummary.includes(
-            "administrative"
-          ) ||
-          titleAndSummary.includes(
-            "follow-up"
-          )
+          titleAndSummary.includes("automation") ||
+          titleAndSummary.includes("workflow") ||
+          titleAndSummary.includes("administrative") ||
+          titleAndSummary.includes("follow-up")
         ) {
           score += 18;
         }
@@ -1529,8 +994,7 @@ function pickRecommendedOpportunity({
         learningCompletions > 0
       ) {
         if (
-          opportunity.difficulty ===
-            "Intermediate"
+          opportunity.difficulty === "Intermediate"
         ) {
           score += 8;
         }
@@ -1539,8 +1003,7 @@ function pickRecommendedOpportunity({
       if (
         highestCompletedLearningLevel ===
           "Intermediate" &&
-        opportunity.difficulty ===
-          "Intermediate"
+        opportunity.difficulty === "Intermediate"
       ) {
         score += 12;
       }
@@ -1548,24 +1011,20 @@ function pickRecommendedOpportunity({
       if (
         highestCompletedLearningLevel ===
           "Advanced" &&
-        opportunity.difficulty ===
-          "Advanced"
+        opportunity.difficulty === "Advanced"
       ) {
         score += 16;
       }
 
       if (
         learningStarts >= 2 &&
-        opportunity.difficulty ===
-          "Intermediate"
+        opportunity.difficulty === "Intermediate"
       ) {
         score += 5;
       }
 
       const previousOpens =
-        openedCounts.get(
-          opportunity.id
-        ) ?? 0;
+        openedCounts.get(opportunity.id) ?? 0;
 
       if (previousOpens === 1) {
         score += 2;
@@ -1579,9 +1038,7 @@ function pickRecommendedOpportunity({
       }
 
       if (
-        startedBehaviorIds.has(
-          opportunity.id
-        )
+        startedBehaviorIds.has(opportunity.id)
       ) {
         score -= 20;
       }
@@ -1676,9 +1133,7 @@ function getHighestCompletedLearningLevel(
     return "Advanced";
   }
 
-  if (
-    levels.includes("Intermediate")
-  ) {
+  if (levels.includes("Intermediate")) {
     return "Intermediate";
   }
 
@@ -1718,38 +1173,13 @@ function ProgressBar({
   footer: string;
 }) {
   return (
-    <div
-      style={{
-        marginTop: 24,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-          gap: 16,
-          marginBottom: 8,
-          color: "var(--muted)",
-          fontSize: 13,
-        }}
-      >
+    <div style={{ marginTop: 24 }}>
+      <div style={progressLabelStyle}>
         <span>{label}</span>
-
-        <span>
-          {percent}% complete
-        </span>
+        <span>{percent}% complete</span>
       </div>
 
-      <div
-        style={{
-          height: 11,
-          borderRadius: 999,
-          overflow: "hidden",
-          background:
-            "rgba(255,255,255,0.08)",
-        }}
-      >
+      <div style={progressTrackStyle}>
         <div
           style={{
             width: `${percent}%`,
@@ -1759,13 +1189,7 @@ function ProgressBar({
         />
       </div>
 
-      <p
-        style={{
-          margin: "10px 0 0",
-          color: "var(--muted)",
-          fontSize: 13,
-        }}
-      >
+      <p style={progressFooterStyle}>
         {footer}
       </p>
     </div>
@@ -1780,37 +1204,12 @@ function ResultCard({
   value: string;
 }) {
   return (
-    <div
-      style={{
-        padding: 18,
-        borderRadius: 16,
-        border:
-          "1px solid rgba(34,197,94,0.16)",
-        background:
-          "rgba(255,255,255,0.03)",
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          color: "var(--muted)",
-          fontSize: 11,
-          fontWeight: 800,
-          textTransform:
-            "uppercase",
-        }}
-      >
+    <div style={resultCardStyle}>
+      <p style={resultLabelStyle}>
         {label}
       </p>
 
-      <p
-        style={{
-          margin: "8px 0 0",
-          color: "#bbf7d0",
-          fontSize: 26,
-          fontWeight: 900,
-        }}
-      >
+      <p style={resultValueStyle}>
         {value}
       </p>
     </div>
@@ -1825,32 +1224,12 @@ function StatCard({
   value: number | string;
 }) {
   return (
-    <div
-      className="card"
-      style={{
-        padding: 20,
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          color: "var(--muted)",
-          fontSize: 12,
-          fontWeight: 700,
-          textTransform:
-            "uppercase",
-        }}
-      >
+    <div className="card" style={{ padding: 18 }}>
+      <p style={statLabelStyle}>
         {label}
       </p>
 
-      <p
-        style={{
-          margin: "8px 0 0",
-          fontSize: 30,
-          fontWeight: 900,
-        }}
-      >
+      <p style={statValueStyle}>
         {value}
       </p>
     </div>
@@ -1871,53 +1250,27 @@ function DashboardCard({
   linkText: string;
 }) {
   return (
-    <div
-      className="card"
-      style={{
-        padding: 26,
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          color: "#60a5fa",
-          fontSize: 11,
-          fontWeight: 800,
-          textTransform:
-            "uppercase",
-        }}
-      >
+    <div className="card" style={{ padding: 24 }}>
+      <p style={blueEyebrowStyle}>
         {eyebrow}
       </p>
 
       <h2
         style={{
           margin: "8px 0 8px",
-          fontSize: 25,
+          fontSize: 24,
         }}
       >
         {title}
       </h2>
 
-      <p
-        style={{
-          margin: 0,
-          color: "var(--muted)",
-          lineHeight: 1.65,
-        }}
-      >
+      <p style={sectionTextStyle}>
         {description}
       </p>
 
       <Link
         href={href}
-        style={{
-          display: "inline-flex",
-          marginTop: 18,
-          color: "#93c5fd",
-          textDecoration: "none",
-          fontWeight: 700,
-        }}
+        style={textLinkStyle}
       >
         {linkText}
       </Link>
@@ -1925,52 +1278,197 @@ function DashboardCard({
   );
 }
 
-function formatNumber(
-  value: number
-) {
+function formatNumber(value: number) {
   return Number.isInteger(value)
     ? value.toLocaleString()
-    : value.toLocaleString(
-        undefined,
-        {
-          maximumFractionDigits: 2,
-        }
-      );
+    : value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      });
 }
+
+const standardSectionStyle = {
+  padding: "clamp(22px, 5vw, 36px)",
+  marginBottom: 24,
+  borderRadius: 20,
+  border: "1px solid rgba(96,165,250,0.22)",
+  background: "rgba(255,255,255,0.025)",
+};
+
+const learningSectionStyle = {
+  ...standardSectionStyle,
+  border: "1px solid rgba(167,139,250,0.28)",
+  background: "rgba(139,92,246,0.04)",
+};
+
+const resultsSectionStyle = {
+  ...standardSectionStyle,
+  border: "1px solid rgba(34,197,94,0.24)",
+  background: "rgba(34,197,94,0.035)",
+};
+
+const adaptiveSectionStyle = {
+  ...standardSectionStyle,
+  border: "1px solid rgba(34,197,94,0.28)",
+  background: "rgba(34,197,94,0.045)",
+};
+
+const blueEyebrowStyle = {
+  margin: 0,
+  color: "#60a5fa",
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase" as const,
+};
+
+const greenEyebrowStyle = {
+  ...blueEyebrowStyle,
+  color: "#86efac",
+};
+
+const purpleEyebrowStyle = {
+  ...blueEyebrowStyle,
+  color: "#c4b5fd",
+};
+
+const sectionTextStyle = {
+  margin: "10px 0 0",
+  color: "var(--muted)",
+  lineHeight: 1.7,
+};
+
+const secondaryButtonStyle = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#ffffff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
 
 const statusPillStyle = {
   padding: "7px 10px",
   borderRadius: 999,
-  background:
-    "rgba(255,255,255,0.05)",
-  border:
-    "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.08)",
   color: "#dbeafe",
   fontSize: 12,
   fontWeight: 700,
 };
 
+const pillRowStyle = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap" as const,
+  marginTop: 16,
+};
+
 const resultsBadgeStyle = {
   padding: "8px 12px",
   borderRadius: 999,
-  background:
-    "rgba(34,197,94,0.1)",
-  border:
-    "1px solid rgba(34,197,94,0.22)",
+  background: "rgba(34,197,94,0.1)",
+  border: "1px solid rgba(34,197,94,0.22)",
   color: "#bbf7d0",
   fontSize: 12,
   fontWeight: 800,
 };
 
+const resultCardStyle = {
+  padding: 18,
+  borderRadius: 16,
+  border: "1px solid rgba(34,197,94,0.16)",
+  background: "rgba(255,255,255,0.03)",
+};
+
+const resultLabelStyle = {
+  margin: 0,
+  color: "var(--muted)",
+  fontSize: 11,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
+
+const resultValueStyle = {
+  margin: "8px 0 0",
+  color: "#bbf7d0",
+  fontSize: 26,
+  fontWeight: 900,
+};
+
+const statLabelStyle = {
+  margin: 0,
+  color: "var(--muted)",
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase" as const,
+};
+
+const statValueStyle = {
+  margin: "8px 0 0",
+  fontSize: 27,
+  fontWeight: 900,
+};
+
+const progressLabelStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 16,
+  marginBottom: 8,
+  color: "var(--muted)",
+  fontSize: 13,
+};
+
+const progressTrackStyle = {
+  height: 10,
+  borderRadius: 999,
+  overflow: "hidden",
+  background: "rgba(255,255,255,0.08)",
+};
+
+const progressFooterStyle = {
+  margin: "10px 0 0",
+  color: "var(--muted)",
+  fontSize: 13,
+};
+
+const reasonBoxStyle = {
+  marginTop: 18,
+  padding: 16,
+  borderRadius: 14,
+  background: "rgba(34,197,94,0.06)",
+  border: "1px solid rgba(34,197,94,0.14)",
+};
+
+const reasonLabelStyle = {
+  margin: 0,
+  color: "#bbf7d0",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
+
+const reasonTextStyle = {
+  margin: "7px 0 0",
+  color: "rgba(255,255,255,0.78)",
+  lineHeight: 1.65,
+  fontSize: 14,
+};
+
 const dismissButtonStyle = {
   padding: "10px 16px",
   borderRadius: 12,
-  border:
-    "1px solid rgba(255,255,255,0.14)",
-  background:
-    "rgba(255,255,255,0.04)",
-  color:
-    "rgba(255,255,255,0.72)",
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.04)",
+  color: "rgba(255,255,255,0.72)",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const textLinkStyle = {
+  display: "inline-flex",
+  marginTop: 18,
+  color: "#93c5fd",
+  textDecoration: "none",
+  fontWeight: 700,
 };
