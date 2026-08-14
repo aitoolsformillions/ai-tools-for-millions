@@ -6,16 +6,29 @@ import { createClient } from "@/lib/supabase/server";
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
 
-  const displayName = String(formData.get("displayName") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const displayName = String(
+    formData.get("displayName") ?? ""
+  ).trim();
+
+  const email = String(
+    formData.get("email") ?? ""
+  ).trim();
+
+  const password = String(
+    formData.get("password") ?? ""
+  );
 
   if (!displayName || !email || !password) {
-    redirect("/signup?error=Please complete every field");
+    redirect(
+      `/signup?error=${encodeURIComponent(
+        "Please complete every field."
+      )}`
+    );
   }
 
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "http://localhost:3000";
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -29,29 +42,49 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    redirect(
+      `/signup?error=${encodeURIComponent(
+        error.message
+      )}`
+    );
   }
 
-  redirect("/signup?message=Check your email to confirm your account");
+  redirect(
+    "/signup?message=verification-email-sent"
+  );
 }
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const email = String(
+    formData.get("email") ?? ""
+  ).trim();
+
+  const password = String(
+    formData.get("password") ?? ""
+  );
 
   if (!email || !password) {
-    redirect("/login?error=Enter your email and password");
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "Enter your email and password."
+      )}`
+    );
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(
+        error.message
+      )}`
+    );
   }
 
   redirect("/dashboard");
@@ -65,10 +98,14 @@ export async function signOut() {
   redirect("/login");
 }
 
-export async function requestPasswordReset(formData: FormData) {
+export async function requestPasswordReset(
+  formData: FormData
+) {
   const supabase = await createClient();
 
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(
+    formData.get("email") ?? ""
+  ).trim();
 
   if (!email) {
     redirect(
@@ -79,26 +116,49 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "http://localhost:3000";
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/update-password`,
-  });
+  const { error } =
+    await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${siteUrl}/update-password`,
+      }
+    );
 
   if (error) {
+    const message =
+      error.message
+        .toLowerCase()
+        .includes("rate limit")
+        ? "Too many reset emails were requested. Please wait before requesting another."
+        : error.message;
+
     redirect(
-      `/forgot-password?error=${encodeURIComponent(error.message)}`
+      `/forgot-password?error=${encodeURIComponent(
+        message
+      )}`
     );
   }
 
   redirect(
-    "/forgot-password?message=Check your email for a password reset link"
+    "/forgot-password?message=reset-email-sent"
   );
-}export async function updatePassword(formData: FormData) {
+}
+
+export async function updatePassword(
+  formData: FormData
+) {
   const supabase = await createClient();
 
-  const password = String(formData.get("password") ?? "");
-  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const password = String(
+    formData.get("password") ?? ""
+  );
+
+  const confirmPassword = String(
+    formData.get("confirmPassword") ?? ""
+  );
 
   if (!password || !confirmPassword) {
     redirect(
@@ -124,18 +184,27 @@ export async function requestPasswordReset(formData: FormData) {
     );
   }
 
-  const { error } = await supabase.auth.updateUser({
-    password,
-  });
+  const { error } =
+    await supabase.auth.updateUser({
+      password,
+    });
 
   if (error) {
-  const message =
-    error.message.toLowerCase().includes("rate limit")
-      ? "Too many emails were requested. Please wait about one hour and try again."
-      : error.message;
+    const message =
+      error.message
+        .toLowerCase()
+        .includes("rate limit")
+        ? "Too many requests were made. Please wait and try again."
+        : error.message;
 
-  redirect(`/forgot-password?error=${encodeURIComponent(message)}`);
-}
+    redirect(
+      `/update-password?error=${encodeURIComponent(
+        message
+      )}`
+    );
+  }
 
-  redirect("/login?message=Password updated successfully. Please sign in.");
+  redirect(
+    "/login?message=Password updated successfully. Please sign in."
+  );
 }
